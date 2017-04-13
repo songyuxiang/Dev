@@ -1,0 +1,93 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'mainwindow.ui'
+#
+# Created by: PyQt5 UI code generator 5.5.1
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(453, 396)
+        self.centralWidget = QtWidgets.QWidget(MainWindow)
+        self.centralWidget.setObjectName("centralWidget")
+        self.gridLayout = QtWidgets.QGridLayout(self.centralWidget)
+        self.gridLayout.setContentsMargins(11, 11, 11, 11)
+        self.gridLayout.setSpacing(6)
+        self.gridLayout.setObjectName("gridLayout")
+        self.pushButton_importBathyData = QtWidgets.QPushButton(self.centralWidget)
+        self.pushButton_importBathyData.setObjectName("pushButton_importBathyData")
+        self.gridLayout.addWidget(self.pushButton_importBathyData, 0, 0, 1, 1)
+        self.pushButton_importGpsData = QtWidgets.QPushButton(self.centralWidget)
+        self.pushButton_importGpsData.setObjectName("pushButton_importGpsData")
+        self.gridLayout.addWidget(self.pushButton_importGpsData, 0, 1, 1, 1)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setContentsMargins(11, 11, 11, 11)
+        self.horizontalLayout.setSpacing(6)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.label = QtWidgets.QLabel(self.centralWidget)
+        self.label.setObjectName("label")
+        self.horizontalLayout.addWidget(self.label)
+        self.timeEdit_BathyTime = QtWidgets.QTimeEdit(self.centralWidget)
+        self.timeEdit_BathyTime.setObjectName("timeEdit_BathyTime")
+        self.horizontalLayout.addWidget(self.timeEdit_BathyTime)
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setContentsMargins(11, 11, 11, 11)
+        self.horizontalLayout_2.setSpacing(6)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.label_2 = QtWidgets.QLabel(self.centralWidget)
+        self.label_2.setObjectName("label_2")
+        self.horizontalLayout_2.addWidget(self.label_2)
+        self.timeEdit_GpsTime = QtWidgets.QTimeEdit(self.centralWidget)
+        self.timeEdit_GpsTime.setObjectName("timeEdit_GpsTime")
+        self.horizontalLayout_2.addWidget(self.timeEdit_GpsTime)
+        self.gridLayout.addLayout(self.horizontalLayout_2, 1, 1, 1, 1)
+        self.plainTextEdit_BathyTerminal = QtWidgets.QPlainTextEdit(self.centralWidget)
+        self.plainTextEdit_BathyTerminal.setDocumentTitle("")
+        self.plainTextEdit_BathyTerminal.setObjectName("plainTextEdit_BathyTerminal")
+        self.gridLayout.addWidget(self.plainTextEdit_BathyTerminal, 2, 0, 1, 1)
+        self.plainTextEdit_GpsTerminal = QtWidgets.QPlainTextEdit(self.centralWidget)
+        self.plainTextEdit_GpsTerminal.setObjectName("plainTextEdit_GpsTerminal")
+        self.gridLayout.addWidget(self.plainTextEdit_GpsTerminal, 2, 1, 1, 1)
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_3.setContentsMargins(11, 11, 11, 11)
+        self.horizontalLayout_3.setSpacing(6)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem)
+        self.pushButton_Match = QtWidgets.QPushButton(self.centralWidget)
+        self.pushButton_Match.setObjectName("pushButton_Match")
+        self.horizontalLayout_3.addWidget(self.pushButton_Match)
+        self.pushButton_Export = QtWidgets.QPushButton(self.centralWidget)
+        self.pushButton_Export.setObjectName("pushButton_Export")
+        self.horizontalLayout_3.addWidget(self.pushButton_Export)
+        self.gridLayout.addLayout(self.horizontalLayout_3, 3, 0, 1, 2)
+        MainWindow.setCentralWidget(self.centralWidget)
+        self.menuBar = QtWidgets.QMenuBar(MainWindow)
+        self.menuBar.setGeometry(QtCore.QRect(0, 0, 453, 19))
+        self.menuBar.setObjectName("menuBar")
+        MainWindow.setMenuBar(self.menuBar)
+        self.mainToolBar = QtWidgets.QToolBar(MainWindow)
+        self.mainToolBar.setObjectName("mainToolBar")
+        MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.mainToolBar)
+        self.statusBar = QtWidgets.QStatusBar(MainWindow)
+        self.statusBar.setObjectName("statusBar")
+        MainWindow.setStatusBar(self.statusBar)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "BathySat(GEOSAT)"))
+        self.pushButton_importBathyData.setText(_translate("MainWindow", "Import Bathy Data"))
+        self.pushButton_importGpsData.setText(_translate("MainWindow", "Import GPS Data"))
+        self.label.setText(_translate("MainWindow", "   Start Time:"))
+        self.label_2.setText(_translate("MainWindow", "   Start Time:"))
+        self.pushButton_Match.setText(_translate("MainWindow", "Match"))
+        self.pushButton_Export.setText(_translate("MainWindow", "Export"))
+
