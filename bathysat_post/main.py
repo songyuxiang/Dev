@@ -13,8 +13,11 @@ class mainwindow(QMainWindow,mainwindow.Ui_MainWindow):
         self.pushButton_importGpsData.clicked.connect(self.importGpsData)
         self.timeEdit_BathyTime.dateTimeChanged.connect(self.changeBathyTime)
         self.timeEdit_GpsTime.dateTimeChanged.connect(self.changeGpsTime)
+        self.pushButton_Match.clicked.connect(self.matchBathyGps)
         self.gpsData=DataArray()
         self.bathyData=DataArray()
+        self.bathyReferenceList=None
+        self.gpsReferenceList=None
     def keyPressEvent(self, event):
         if event.key()==Qt.Key_Q:
             self.close()
@@ -22,10 +25,16 @@ class mainwindow(QMainWindow,mainwindow.Ui_MainWindow):
         filename,_=QFileDialog.getOpenFileName()
         self.bathyData=loadBathyData(filename)
         self.printLeft(self.bathyData)
+        self.bathyReferenceList=self.bathyData.checkAllStatics(parametersList=["Depth","A","N","W"])
+        for i in self.bathyReferenceList:
+            self.comboBox_BathyReferencePoint.addItem(str(self.bathyData.at(i)))
     def importGpsData(self):
         filename,_=QFileDialog.getOpenFileName()
         self.gpsData=loadGpsData(filename)
         self.printRight(self.gpsData)
+        self.gpsReferenceList = self.gpsData.checkAllStatics(parametersList=["Elev","N", "E"])
+        for i in self.gpsReferenceList:
+            self.comboBox_GpsReferencePoint.addItem(str(self.gpsData.at(i)))
     def printLeft(self,data):
         self.plainTextEdit_BathyTerminal.setPlainText(str(data))
     def printRight(self,data):
@@ -50,8 +59,11 @@ class mainwindow(QMainWindow,mainwindow.Ui_MainWindow):
             return "="
         else:
             return "<"
-
-
+    def matchBathyGps(self):
+        bathyIndex=self.bathyReferenceList[self.comboBox_BathyReferencePoint.currentIndex()]
+        gpsIndex=self.gpsReferenceList[self.comboBox_GpsReferencePoint.currentIndex()]
+        newArray=linkDataArray(self.bathyData,bathyIndex,self.gpsData,gpsIndex)
+        self.plainTextEdit_MatchResult.setPlainText(str(newArray))
 if __name__=='__main__':
     app=QApplication(sys.argv)
     form=mainwindow()

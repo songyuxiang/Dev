@@ -16,56 +16,95 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <widget class="QPushButton" name="pushButton_importBathyData">
-      <property name="text">
-       <string>Import Bathy Data</string>
-      </property>
-     </widget>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QPushButton" name="pushButton_importBathyData">
+        <property name="text">
+         <string>Import Bathy Data</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>   Start Time:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTimeEdit" name="timeEdit_BathyTime"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="plainTextEdit_BathyTerminal">
+        <property name="documentTitle">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item row="0" column="1">
-     <widget class="QPushButton" name="pushButton_importGpsData">
-      <property name="text">
-       <string>Import GPS Data</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QLabel" name="label">
+       <widget class="QPushButton" name="pushButton_importGpsData">
         <property name="text">
-         <string>   Start Time:</string>
+         <string>Import GPS Data</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QTimeEdit" name="timeEdit_BathyTime"/>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>   Start Time:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTimeEdit" name="timeEdit_GpsTime"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="plainTextEdit_GpsTerminal"/>
       </item>
      </layout>
     </item>
-    <item row="1" column="1">
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item row="1" column="0" colspan="2">
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
       <item>
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>   Start Time:</string>
+         <string>Reference point</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QTimeEdit" name="timeEdit_GpsTime"/>
+       <widget class="QComboBox" name="comboBox_BathyReferencePoint"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Reference point</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_GpsReferencePoint"/>
       </item>
      </layout>
     </item>
-    <item row="2" column="0">
-     <widget class="QPlainTextEdit" name="plainTextEdit_BathyTerminal">
+    <item row="2" column="0" colspan="2">
+     <widget class="QPlainTextEdit" name="plainTextEdit_MatchResult">
       <property name="documentTitle">
        <string/>
       </property>
      </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QPlainTextEdit" name="plainTextEdit_GpsTerminal"/>
     </item>
     <item row="3" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_3">

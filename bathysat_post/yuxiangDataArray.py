@@ -47,6 +47,18 @@ def loadGpsData(filename,headerIndex=2,dataStartIndex=5,spliter=','):
 
     return allInfo
 
+def linkDataArray(arrayBathy,indexBathy,arrayGps,indexGps):
+    newArray=DataArray()
+
+    for i in range(indexGps,arrayGps.size()):
+        if indexBathy+i<arrayBathy.size():
+            newData = GpsData(arrayGps.at(i).N,arrayGps.at(i).E,arrayGps.at(i).W,arrayGps.at(i).Elev,arrayGps.at(i).Date,arrayGps.at(i).Time)
+            linkBathyGps(arrayBathy.at(indexBathy+i),newData)
+            newArray.append(newData)
+    return newArray
+def linkBathyGps(dataBathy,dataGps):
+    dataGps.setDepth(dataBathy.Depth)
+    return dataGps
 
 class BathyData:
     def __init__(self,Date=None,Time=None,Depth=None,A=None,N=None,W=None):
@@ -91,6 +103,7 @@ class GpsData:
         self.E = E
         self.W = W
         self.N = N
+        self.Depth=None
     def setDate(self,Date):
         self.Date=Date
     def setTime(self,Time):
@@ -103,19 +116,22 @@ class GpsData:
         self.W=W
     def setE(self,E):
         self.E=E
+    def setDepth(self,Depth):
+        self.Depth=Depth
     def __str__(self):
         out=""
         if self.Date!=None:
             out+="Date:"+self.Date+" || "
         if self.Time!=None:
             out+="Time:"+self.Time+" || "
-
         if self.N!=None:
             out+="N:"+self.N+" || "
         if self.E!=None:
             out+="E:"+self.E+" || "
         if self.Elev!=None:
             out+="Elevation:"+self.Elev+" || "
+        if self.Depth!=None:
+            out+="Depth:"+self.Depth+" || "
         return out
 class DataArray:
     def __init__(self):
