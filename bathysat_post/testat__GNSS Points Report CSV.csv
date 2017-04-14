@@ -1,8 +1,4 @@
-Point coordinates for job testat
-
 Point,North,East,Elev,Description,Hz Prec,Vt Prec,Solution,PDOP,Sats,Start Date,Start Time,End Date,End Time,Duration
-VRS1,7734485.319,1413608.157,53.771,Installation de base,?,?,KeyedIn,?,?,?,?,?,?,?
-VRS2,7734485.319,1413608.157,53.771,Installation de base,?,?,KeyedIn,?,?,?,?,?,?,?
 1,7737090.356,1409565.751,48.893,Topo Continu,0.015,0.022,NetworkFix,1.1,16,2017-04-12,12:08:42.0,2017-04-12,12:08:42.0,0.0
 2,7737090.359,1409565.744,48.886,Topo Continu,0.011,0.017,NetworkFix,1.1,16,2017-04-12,12:08:43.0,2017-04-12,12:08:43.0,0.0
 3,7737090.384,1409565.776,48.888,Topo Continu,0.016,0.022,NetworkFix,1.1,16,2017-04-12,12:08:44.0,2017-04-12,12:08:44.0,0.0

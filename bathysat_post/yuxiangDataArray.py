@@ -1,59 +1,69 @@
 import numpy as np
 def loadBathyData(filename):
-    with open(filename,'r') as file:
-        data=file.readlines()
-    allInfo=DataArray()
-    for line in data:
-        info=BathyData()
-        temp=line.split(',')
-        for i in range(len(temp)):
+    try:
+        with open(filename,'r') as file:
+            data=file.readlines()
+        allInfo=DataArray()
+        for line in data:
+            info=BathyData()
+            temp=line.split(',')
+            for i in range(len(temp)):
 
-            if temp[i]=='M':
-                info.setDepth(temp[i-1])
-            if temp[i]=='A':
-                info.setA(temp[i-1])
-            if temp[i]=='N':
-                info.setN(temp[i-1])
-            if temp[i]=='W':
-                info.setW(temp[i-1])
-            if temp[i].find("DateTime")>0 and i==0:
-                info.setTime(temp[i][9:])
-                info.setDate(temp[i+1][:10])
-        allInfo.append(info)
-    return allInfo
+                if temp[i]=='M':
+                    info.setDepth(temp[i-1])
+                if temp[i]=='A':
+                    info.setA(temp[i-1])
+                if temp[i]=='N':
+                    info.setN(temp[i-1])
+                if temp[i]=='W':
+                    info.setW(temp[i-1])
+                if temp[i].find("DateTime")>0 and i==0:
+                    info.setTime(temp[i][9:])
+                    info.setDate(temp[i+1][:10])
+            allInfo.append(info)
+        return allInfo
+    except IOError:
+        print("could not open file")
+        return None
 
-def loadGpsData(filename,headerIndex=2,dataStartIndex=5,spliter=','):
-    with open(filename,'r') as file:
-        data=file.readlines()
-    header=data[headerIndex].split(spliter)
-    x=header.index("End Time")
-    data=data[dataStartIndex:]
-    allInfo=DataArray()
-    for line in data:
-        info=GpsData()
-        temp=line.split(',')
-        for i in range(len(header)):
-            if header[i]=='North':
-                info.setN(temp[i])
-            if header[i]=='East':
-                info.setE(temp[i])
-            if header[i] == 'Elev':
-                info.setElev(temp[i])
-            if header[i] == 'End Time':
-                info.setTime(temp[i])
-            if header[i] == 'End Date':
-                info.setDate(temp[i])
-        allInfo.append(info)
+def loadGpsData(filename,headerIndex=0,dataStartIndex=1,spliter=','):
+    try:
+        with open(filename,'r') as file:
+            data=file.readlines()
+        header=data[headerIndex].split(spliter)
+        x=header.index("End Time")
+        data=data[dataStartIndex:]
+        allInfo=DataArray()
+        for line in data:
+            info=GpsData()
+            temp=line.split(',')
+            for i in range(len(header)):
+                if header[i]=='North':
+                    info.setN(temp[i])
+                if header[i]=='East':
+                    info.setE(temp[i])
+                if header[i] == 'Elev':
+                    info.setElev(temp[i])
+                if header[i] == 'End Time':
+                    info.setTime(temp[i])
+                if header[i] == 'End Date':
+                    info.setDate(temp[i])
+            allInfo.append(info)
 
-    return allInfo
+        return allInfo
+    except:
+        print("could not open this file")
+        return None
 
-def linkDataArray(arrayBathy,indexBathy,arrayGps,indexGps):
+def linkDataArray(arrayBathy,indexBathy,arrayGps,indexGps,hDiff):
     newArray=DataArray()
 
     for i in range(indexGps,arrayGps.size()):
         if indexBathy+i<arrayBathy.size():
-            newData = GpsData(arrayGps.at(i).N,arrayGps.at(i).E,arrayGps.at(i).W,arrayGps.at(i).Elev,arrayGps.at(i).Date,arrayGps.at(i).Time)
+            newData = GpsData(N=arrayGps.at(i).N,E=arrayGps.at(i).E,W=arrayGps.at(i).W,S=arrayGps.at(i).S,Elev=arrayGps.at(i).Elev,Date=arrayGps.at(i).Date,Time=arrayGps.at(i).Time)
             linkBathyGps(arrayBathy.at(indexBathy+i),newData)
+            if newData.Elev!=None and arrayBathy.at(indexBathy+i).Depth!=None:
+                newData.setElev(str(float(newData.Elev)-float(hDiff)-float(arrayBathy.at(indexBathy+i).Depth)))
             newArray.append(newData)
     return newArray
 def linkBathyGps(dataBathy,dataGps):
@@ -61,13 +71,15 @@ def linkBathyGps(dataBathy,dataGps):
     return dataGps
 
 class BathyData:
-    def __init__(self,Date=None,Time=None,Depth=None,A=None,N=None,W=None):
+    def __init__(self,Date=None,Time=None,Depth=None,A=None,N=None,W=None,S=None,E=None):
         self.Date=Date
         self.Time=Time
         self.Depth=Depth
         self.A=A
         self.N=N
         self.W=W
+        self.S = S
+        self.E = E
     def setDate(self,Date):
         self.Date=Date
     def setTime(self,Time):
@@ -94,15 +106,20 @@ class BathyData:
             out+="N:"+self.N+" || "
         if self.W!=None:
             out+="W:"+self.W+" || "
+        if self.S!=None:
+            out+="S:"+self.S+" || "
+        if self.E!=None:
+            out+="E:"+self.E+" || "
         return out
 class GpsData:
-    def __init__(self,N=None,E=None,W=None,Elev=None,Date=None,Time=None):
+    def __init__(self,N=None,E=None,W=None,S=None,Elev=None,Date=None,Time=None):
         self.Date = Date
         self.Time = Time
         self.Elev = Elev
         self.E = E
         self.W = W
         self.N = N
+        self.S = S
         self.Depth=None
     def setDate(self,Date):
         self.Date=Date
@@ -128,6 +145,10 @@ class GpsData:
             out+="N:"+self.N+" || "
         if self.E!=None:
             out+="E:"+self.E+" || "
+        if self.S!=None:
+            out+="S:"+self.S+" || "
+        if self.W!=None:
+            out+="W:"+self.W+" || "
         if self.Elev!=None:
             out+="Elevation:"+self.Elev+" || "
         if self.Depth!=None:
@@ -194,6 +215,13 @@ class DataArray:
                     out["W"] = True
                 else:
                     out["W"] = False
+            if "S" in parametersList and self.dataArray[i].S!=None and self.dataArray[i-1].S!=None:
+                S0 = self.dataArray[i].S
+                S1 = self.dataArray[i - 1].S
+                if np.abs(float(S1) - float(S0)) <0.01:
+                    out["S"] = True
+                else:
+                    out["S"] = False
             for i in out.values():
                 if i==True:
                     trueNumber+=1
