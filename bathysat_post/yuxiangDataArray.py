@@ -15,6 +15,10 @@ def loadBathyData(filename):
                     info.setA(temp[i-1])
                 if temp[i]=='N':
                     info.setN(temp[i-1])
+                if temp[i]=='E':
+                    info.setE(temp[i-1])
+                if temp[i]=='S':
+                    info.setS(temp[i-1])
                 if temp[i]=='W':
                     info.setW(temp[i-1])
                 if temp[i].find("DateTime")>0 and i==0:
@@ -38,6 +42,8 @@ def loadGpsData(filename,headerIndex=0,dataStartIndex=1,spliter=','):
             info=GpsData()
             temp=line.split(',')
             for i in range(len(header)):
+                if header[i] == 'Point':
+                    info.setID(temp[i])
                 if header[i]=='North':
                     info.setN(temp[i])
                 if header[i]=='East':
@@ -60,7 +66,7 @@ def linkDataArray(arrayBathy,indexBathy,arrayGps,indexGps,hDiff):
 
     for i in range(indexGps,arrayGps.size()):
         if indexBathy+i<arrayBathy.size():
-            newData = GpsData(N=arrayGps.at(i).N,E=arrayGps.at(i).E,W=arrayGps.at(i).W,S=arrayGps.at(i).S,Elev=arrayGps.at(i).Elev,Date=arrayGps.at(i).Date,Time=arrayGps.at(i).Time)
+            newData = GpsData(ID=arrayGps.at(i).ID,N=arrayGps.at(i).N,E=arrayGps.at(i).E,W=arrayGps.at(i).W,S=arrayGps.at(i).S,Elev=arrayGps.at(i).Elev,Date=arrayGps.at(i).Date,Time=arrayGps.at(i).Time)
             linkBathyGps(arrayBathy.at(indexBathy+i),newData)
             if newData.Elev!=None and arrayBathy.at(indexBathy+i).Depth!=None:
                 newData.setElev(str(float(newData.Elev)-float(hDiff)-float(arrayBathy.at(indexBathy+i).Depth)))
@@ -88,6 +94,10 @@ class BathyData:
         self.Depth=Depth
     def setA(self,A):
         self.A=A
+    def setE(self, E):
+        self.E = E
+    def setS(self, S):
+        self.S = S
     def setN(self,N):
         self.N=N
     def setW(self,W):
@@ -112,7 +122,7 @@ class BathyData:
             out+="E:"+self.E+" || "
         return out
 class GpsData:
-    def __init__(self,N=None,E=None,W=None,S=None,Elev=None,Date=None,Time=None):
+    def __init__(self,ID=None,N=None,E=None,W=None,S=None,Elev=None,Date=None,Time=None):
         self.Date = Date
         self.Time = Time
         self.Elev = Elev
@@ -120,6 +130,7 @@ class GpsData:
         self.W = W
         self.N = N
         self.S = S
+        self.ID=ID
         self.Depth=None
     def setDate(self,Date):
         self.Date=Date
@@ -135,8 +146,12 @@ class GpsData:
         self.E=E
     def setDepth(self,Depth):
         self.Depth=Depth
+    def setID(self,id):
+        self.ID=id
     def __str__(self):
         out=""
+        if self.ID!=None:
+            out+="ID:"+self.ID+" || "
         if self.Date!=None:
             out+="Date:"+self.Date+" || "
         if self.Time!=None:
@@ -163,7 +178,7 @@ class DataArray:
         return self.dataArray[i]
     def size(self):
         return len(self.dataArray)
-    def checkStatic(self,i,parametersList=["Depth"]):
+    def checkStatic(self,i,parametersList):
         if i<1:
             print("index has to be greater than 1")
         elif len(self.dataArray)<2:
@@ -190,28 +205,28 @@ class DataArray:
             if "N" in parametersList and self.dataArray[i].N!=None and self.dataArray[i-1].N!=None:
                 N0 = self.dataArray[i].N
                 N1 = self.dataArray[i - 1].N
-                if np.abs(float(N1) - float(N0))<0.01:
+                if np.abs(float(N1) - float(N0))<0.05:
                     out["N"] = True
                 else:
                     out["N"] = False
             if "E" in parametersList and self.dataArray[i].E!=None and self.dataArray[i-1].E!=None:
                 E0 = self.dataArray[i].E
                 E1 = self.dataArray[i - 1].E
-                if np.abs(float(E1) - float(E0)) <0.01:
+                if np.abs(float(E1) - float(E0)) <0.05:
                     out["E"] = True
                 else:
                     out["E"] = False
             if "Elev" in parametersList and self.dataArray[i].Elev!=None and self.dataArray[i-1].Elev!=None:
                 Elev0 = self.dataArray[i].Elev
                 Elev1 = self.dataArray[i - 1].Elev
-                if np.abs(float(Elev1) - float(Elev0)) <0.01:
+                if np.abs(float(Elev1) - float(Elev0)) <0.05:
                     out["Elev"] = True
                 else:
                     out["Elev"] = False
             if "W" in parametersList and self.dataArray[i].W!=None and self.dataArray[i-1].W!=None:
                 W0 = self.dataArray[i].W
                 W1 = self.dataArray[i - 1].W
-                if np.abs(float(W1) - float(W0)) <0.01:
+                if np.abs(float(W1) - float(W0)) <0.05:
                     out["W"] = True
                 else:
                     out["W"] = False
@@ -229,7 +244,7 @@ class DataArray:
             if len(parametersList)==trueNumber:
                 isStatic=True
             return out,isStatic
-    def checkAllStatics(self,parametersList=["Depth"]):
+    def checkAllStatics(self,parametersList):
         staticList=[]
         restartPoint=[]
         beginStatic=False
