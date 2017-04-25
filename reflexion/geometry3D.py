@@ -1,36 +1,84 @@
 import numpy as np
 from numpy.linalg import svd
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+def yuxiangLoadPointCloud(type,filename="data.csv",header=True,sort=False):
+    text=TextEditor(filename,header=header)
+    pointcloud=PointsCloud()
+    for i in text.data:
+        if i[3]=='nan':
+            point=Point3D(i[0],i[1],i[2],type=i[4])
+        else:
+            point = Point3D(i[0], i[1], i[2], type=i[3])
+        if point.type==type:
+            pointcloud.addPoint(point)
+    if sort==True:
+        pointcloud.updateTangents()
+    pointcloud.saveToFile("cloud"+str(type))
+    return pointcloud
 
 # get distance of two 3D points
-def yuxiangDistanceTwoPts(pt1, pt2):
-    return np.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2 + (pt1.z - pt2.z) ** 2)
-
-def yuxiangLineCloudIntersection(line,pointcloud):
+def yuxiangDistanceTwoPts(pt1, pt2,is3D=True):
+    if is3D:
+        return np.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2 + (pt1.z - pt2.z) ** 2)
+    else:
+        return np.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2)
+def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.05,is3D=True):
     pt1=line.startPoint
     pt2=pt1+line.direction
+    out1=[]
+    out2=[]
     for i in pointcloud.data:
-        d1=yuxiangDistanceTwoPts(pt1,i)
-        d2=yuxiangDistanceTwoPts(pt2,i)
-        if d1-d2<0.05:
-            return i,d1
-    print("no intersection!")
-    return None
+        d1=yuxiangDistanceTwoPts(pt1,i,is3D)
+        d2=yuxiangDistanceTwoPts(pt2,i,is3D)
+        if d1>d2:
+            if np.abs(d1-d2-1)<tolerance:
+                out1.append([i,d1])
+        else:
+            if np.abs(d2-d1-1)<tolerance:
+                out2.append([i, d1])
+    return out1,out2
 
+
+def yuxiangNearestLineCloudIntersection(line, pointcloud, tolerance=0.05,is3D=True):
+    pt1 = line.startPoint
+    pt2 = pt1 + line.direction
+    point1=PointsCloud()
+    point2=PointsCloud()
+    lMin1=10000
+    lMin2=10000
+    for i in pointcloud.data:
+        d1 = yuxiangDistanceTwoPts(pt1, i,is3D)
+        d2 = yuxiangDistanceTwoPts(pt2, i,is3D)
+
+        if d1 > d2:
+            if np.abs(d1 - d2 - 1) < tolerance:
+                if d1<lMin1:
+                    point1=i
+                    lMin1=d1
+        else:
+            if np.abs(d2 - d1 - 1) < tolerance:
+                if d1<lMin2:
+                    point2=i
+                    lMin2=d1
+    if lMin1==10000:
+        point1=None
+        lMin1=None
+    if lMin2==10000:
+        point2=None
+        lMin2=None
+    return point1,lMin1,point2,lMin2
 
 def yuxiangFindMiddleTrack(pointcloud1,pointcloud2):
-    pointcloud1.sort()
-    for i in pointcloud1.data():
-        max=0
+    newpointcloud = PointsCloud()
+    for i in range(pointcloud1.length()):
+        min=10000
         index=0
-        newpointcloud=PointsCloud()
-        for j in pointcloud2.data():
-            d=yuxiangDistanceTwoPts(i,j)
-            if d>max:
-                max=d
+        for j in range(pointcloud2.length()):
+            d=yuxiangDistanceTwoPts(pointcloud1[i],pointcloud2[j])
+            if d<min:
+                min=d
                 index=j
         newpointcloud.addPoint((pointcloud1[i]+pointcloud2[index])/2)
     return newpointcloud
@@ -61,6 +109,9 @@ def yuxiangIntersectPlaneVector(plane, line, tolerance=10e-6):
 
 # convert coordinates from cartesian to spheric
 def yuxiangCartesian2Spheric(x, y, z):
+    x=float(x)
+    y=float(y)
+    z=float(z)
     phi = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     omiga = np.arccos(z / phi)
     if y >= 0:
@@ -87,6 +138,22 @@ def yuxiangAxeMirror(vector, axe):
     return Vector3D(x, y, z)
 
 
+class TextEditor:
+    def __init__(self,filename,openmode='r',spliter=',',header=False):
+        file=open(filename,openmode)
+        self.data=[]
+        if header==False:
+            self.lines=file.readlines()
+
+        else:
+            lines=file.readlines()
+            self.lines=lines[1:]
+            self.header=lines[0]
+        for i in self.lines:
+            i=i.replace("\n","")
+            element=i.split(spliter)
+            self.data.append(element)
+
 class Geometry3D:
     def __init__(self):
         self.id = 0
@@ -97,12 +164,12 @@ class Geometry3D:
 
 
 class Point3D(Geometry3D):
-    def __init__(self, x, y, z=0,id=None):
-        self.x = x
-        self.y = y
-        self.z = z
+    def __init__(self, x, y, z=0,id=None,type=None):
+        self.x = float(x)
+        self.y = float(y)
+        self.z = float(z)
         self.id=id
-
+        self.type=type
     def __add__(self, other):
         x = self.x + other.x
         y = self.y + other.y
@@ -136,9 +203,9 @@ class Point3D(Geometry3D):
 
 class Vector3D(Geometry3D):
     def __init__(self, x=0, y=0, z=0):
-        self.x = x
-        self.y = y
-        self.z = z
+        self.x = float(x)
+        self.y = float(y)
+        self.z = float(z)
         self.length, self.phi, self.theta = yuxiangCartesian2Spheric(x, y, z)
 
     def __truediv__(self, other):
@@ -165,11 +232,17 @@ class Vector3D(Geometry3D):
 
 
 class Line3D(Geometry3D):
-    def __init__(self, point1, point2):
-        self.startPoint = point1
-        self.endPoint = point2
-        self.direction = Vector3D(point2.x - point1.x, point2.y - point1.y, point2.z - point1.z).unify()
-
+    def __init__(self, startPt=None, endPt=None,vector=None):
+        if startPt!=None and endPt!=None:
+            self.startPoint = startPt
+            self.endPoint = endPt
+            self.direction = Vector3D(endPt.x - startPt.x, endPt.y - startPt.y, endPt.z - startPt.z).unify()
+        elif startPt!=None and vector!=None:
+            self.startPoint = startPt
+            self.endPoint = startPt+vector
+            self.direction = vector.unify()
+        else:
+            print("error : wrong input for Line3D!")
     def toVector(self):
         return Vector3D(self.endPoint.x - self.startPoint.x, self.endPoint.y - self.startPoint.y,
                         self.endPoint.z - self.startPoint.z)
@@ -184,13 +257,17 @@ class PointsCloud:
             # self.length = len(list)
         self.tangent=[]
         self.normal=[]
+
     def toList(self):
         list = []
         for i in self.data:
             pt = [i.x, i.y, i.z]
             list.append(pt)
         return list
-
+    def clonefrom(self,cloud):
+        self.data=cloud.data
+        self.tangent=cloud.tangent
+        self.normal=cloud.normal
     def toArray(self):
         return np.array(self.toList())
     def seperateXYZ(self):
@@ -231,17 +308,18 @@ class PointsCloud:
         for i in order:
             newCloud.addPoint(self.data[i])
         self.data=newCloud.data
-    def updateTangents(self,radius=3):
+    def updateTangents(self,searchNeighbor=2):
         self.sort()
-
+        self.tangent=[]
+        self.normal=[]
         for i in range(self.length()):
             temp = []
-            if i < radius-1:
-                temp=self.data[:i+radius]
-            elif i>self.length()-radius:
-                temp=self.data[(i-radius+1):]
+            if i < searchNeighbor-1:
+                temp=self.data[:i+searchNeighbor]
+            elif i>self.length()-searchNeighbor:
+                temp=self.data[(i-searchNeighbor+1):]
             else:
-                temp=self.data[i-radius+1:i+radius]
+                temp=self.data[i-searchNeighbor+1:i+searchNeighbor]
 
             para=yuxiangLineFitting(temp)
             self.tangent.append(para[1])
@@ -249,23 +327,74 @@ class PointsCloud:
     def __str__(self):
         out=""
         for i in self.data:
-            out+=str([i.x,i.y,i.z])+"\n"
+            if i.type==None:
+                out+=str([i.x,i.y,i.z])+"\n"
+            else:
+                out += str([i.x, i.y, i.z,i.type]) + "\n"
         return out
     def resample(self,radius=5):
-        pointcloud=PointsCloud()
-        pointcloud.addPoint(self.data[0])
-        newPt=self.data[0]
-        i=0
-        while i<self.length():
-            for j in range(i+1,self.length()):
-                d=yuxiangDistanceTwoPts(newPt,self.data[j])
-                if d>radius-0.1 and d<radius+0.1:
-                    newPt=self.data[j]
-                    pointcloud.addPoint(newPt)
-                    i=j
-                    break
-            break
-        return pointcloud
+        data=self.data
+        size=len(data)
+        deletenumber=0
+        for i in range(size-1):
+            j=1
+            while j<size-i-1-deletenumber:
+                if yuxiangDistanceTwoPts(data[i],data[j])<radius:
+                    data.pop(j)
+                    deletenumber+=1
+                print(j, len(data), size - i - 1 - deletenumber)
+                j+=1
+        return data
+
+    def saveToFile(self,filename):
+        file =open(filename+".csv",'w')
+        for i in range(self.length()):
+            file.write(str(self.data[i].x)+',')
+            file.write(str(self.data[i].y)+',')
+            file.write(str(self.data[i].z)+',')
+            if self.data[i].type!=None:
+                file.write(str(self.data[i].type) + ',')
+            else:
+                file.write("None" + ',')
+            try:
+                file.write(str(self.tangent[i])+',')
+            except IndexError:
+                file.write("None"+',')
+            try:
+                file.write(str(self.normal[i])+'\n')
+            except IndexError:
+                file.write("None"+'\n')
+        print("saved")
+    def loadFromFile(self,filename):
+        file = open(filename, 'r')
+        lines=file.readlines()
+        self.data=[]
+        self.tangent=[]
+        self.normal=[]
+
+        for i in lines:
+            i=i.replace('\n','')
+            data=i.split(',')
+            point=Point3D(data[0],data[1],data[2],type=data[3])
+            self.data.append(point)
+            if i[4]!="None":
+                self.tangent.append(i[4])
+            if i[5]!="None":
+                self.normal.append(i[5])
+        print("loaded")
+    def show(self):
+        x=[]
+        y=[]
+        z=[]
+        for i in range(self.length()):
+            x.append(self.data[i].x)
+            y.append(self.data[i].y)
+            z.append(self.data[i].z)
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(np.array(x),np.array(y),np.array(z))
+        plt.show()
+
 class Plane3D(Geometry3D):
     def __init__(self):
         self.center = None

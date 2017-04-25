@@ -1,41 +1,38 @@
-from numpy import *
-from numpy.linalg import svd
-def planeFit(points):
-    points=array(points).transpose()
-    ctr = points.mean(axis=1)
-    x = points - ctr[:,None]
-    M = dot(x, x.T) # Could also use cov(x) here.
-    return ctr, svd(M)[0][:,-1]
-def changeListType(list,type):
-    def changeType(a,type):
-        if type=='s':
-            return str(a)
-        elif type=='f':
-            return float(a)
-        elif type=='d':
-            return int(a)
-    size=len(shape(list))
-    if size==0:
-        return  changeType(list)
-    elif size==1:
-        out=[]
-        for i in list:
-            out.append(changeType(i,type))
-        return out
-    elif size==2:
-        out=[]
-        for i in list:
-            l = []
-            for j in i:
-                l.append(changeType(j,type))
-            out.append(l)
-        return out
+'''
+==============
+3D scatterplot
+==============
 
-pointCloud=[]
-with open("cloudpoint.txt",'r') as file:
-    data=file.readlines()
-for i in data:
-    temp=i.replace('\n', "").split(' ')[:3]
-    pointCloud.append(temp)
-pointCloud=changeListType(pointCloud,'f')
-print(planeFit(pointCloud))
+Demonstration of a basic scatterplot in 3D.
+'''
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def randrange(n, vmin, vmax):
+    '''
+    Helper function to make an array of random numbers having shape (n, )
+    with each number distributed Uniform(vmin, vmax).
+    '''
+    return (vmax - vmin)*np.random.rand(n) + vmin
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+n = 100
+
+# For each set of style and range settings, plot n random points in the box
+# defined by x in [23, 32], y in [0, 100], z in [zlow, zhigh].
+for c, m, zlow, zhigh in [('r', 'o', -50, -25), ('b', '^', -30, -5)]:
+    xs = randrange(n, 23, 32)
+    ys = randrange(n, 0, 100)
+    zs = randrange(n, zlow, zhigh)
+    ax.scatter(xs, ys, zs, c=c, marker=m)
+
+ax.set_xlabel('X Label')
+ax.set_ylabel('Y Label')
+ax.set_zlabel('Z Label')
+
+plt.show()
