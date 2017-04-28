@@ -30,6 +30,37 @@ def loadBathyData(filename):
         print("could not open file")
         return None
 
+def loadGpsRawData(filename):
+    try:
+        with open(filename,'r') as file:
+            data=file.readlines()
+        header=data[headerIndex].split(spliter)
+        x=header.index("End Time")
+        data=data[dataStartIndex:]
+        allInfo=DataArray()
+        for line in data:
+            info=GpsData()
+            temp=line.split(',')
+            for i in range(len(header)):
+                if header[i] == 'Point':
+                    info.setID(temp[i])
+                if header[i]=='North':
+                    info.setN(temp[i])
+                if header[i]=='East':
+                    info.setE(temp[i])
+                if header[i] == 'Elev':
+                    info.setElev(temp[i])
+                if header[i] == 'End Time':
+                    info.setTime(temp[i])
+                if header[i] == 'End Date':
+                    info.setDate(temp[i])
+            allInfo.append(info)
+        file.close()
+        return allInfo
+    except:
+        print("could not open this file")
+        return None
+
 def loadGpsData(filename,headerIndex=0,dataStartIndex=1,spliter=','):
     try:
         with open(filename,'r') as file:
