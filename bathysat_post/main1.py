@@ -217,7 +217,7 @@ class mainwindow(QMainWindow,bathypost.Ui_BathyPost):
         for i in range(len(self.gpsData.data)):
             # self.gpsData.dataCC[i].N,self.gpsData.dataCC[i].W,self.gpsData.dataCC[i].H= yuxiangProjection.WGS84ToCC(self.gpsData.dataWGS[i].N,self.gpsData.dataWGS[i].W,self.gpsData.dataWGS[i].H,self.comboBox_zone.currentText()[-2:])
             # print(self.gpsData.dataWGS[i].N,self.gpsData.dataWGS[i].W,self.gpsData.dataWGS[i].H,self.comboBox_zone.currentText()[-2:])
-            x,y,z= yuxiangProjection.WGS84ToCC(self.gpsData.data[i].N,self.gpsData.data[i].W,self.gpsData.data[i].H,projection)
+            x,y,z= yuxiangProjection.WGS84ToCC(self.gpsData.data[i].W,self.gpsData.data[i].N,self.gpsData.data[i].H,projection)
             out+=str(x)+","+str(y)+","+str(z)+"\n"
         self.plainTextEdit_result.setPlainText(out)
 if __name__=='__main__':

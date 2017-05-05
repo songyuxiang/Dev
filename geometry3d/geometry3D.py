@@ -2,9 +2,59 @@ import numpy as np
 from numpy.linalg import svd
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import pyproj
+import scipy
+import scipy.interpolate
+class yuxiangProjection:
+    def yuxiangCC2WGS84(x1,y1,z1,zone):
+        wgs = pyproj.Proj(init='epsg:4326')
+        cc = pyproj.Proj(init="epsg:39%s" % (str(zone)))
+        lon, lat, elevation = pyproj.transform(cc, wgs, x1,y1,z1)
+        return lon, lat, elevation
+class yuxiangConvert:
+    def yuxiangRadian2Gradian(radian):
+        gradian=radian*np.pi/200
+        return gradian
+    def yuxiangDegree2Gradian(degree):
+        gradian=degree*10/9
+        return gradian
+    def yuxiangDegree2Radian(degree):
+        radian=degree/180*np.pi
+        return radian
+def yuxiangGetPointCloudCenter(pointList):
+    size=len(pointList)
+    x=0
+    y=0
+    z=0
+    for i in pointList:
+        x+=i.x
+        y+=i.y
+        z+=i.z
+    return Point3D(x/size,y/size,z/size)
+def yuxiangGetCap(startPt,endPt):
+    deltaX=endPt.x-startPt.x
+    deltaY=endPt.y-startPt.y
+    a=None
 
-
-
+    if deltaX>0 and deltaY>0:
+        a=np.arctan(deltaX/deltaY)
+    elif deltaX==0 and deltaY>0:
+        a=0
+    elif deltaX==0 and deltaY==0:
+        a=None
+    elif deltaX>0 and deltaY==0:
+        a=np.pi/2
+    elif deltaX>0 and deltaY<0:
+        a=np.pi/2+np.abs(np.arctan(deltaY/deltaX))
+    elif deltaX==0 and deltaY<0:
+        a=np.pi
+    elif deltaX<0 and deltaY < 0:
+        a = np.pi+np.abs(np.arctan(deltaX/deltaY))
+    elif deltaX < 0 and deltaY == 0:
+        a=3*np.pi/2
+    elif deltaX < 0 and deltaY >0:
+        a = 3 * np.pi / 2+np.abs(np.arctan(deltaY/deltaX))
+    return a
 def yuxiangLoadPointCloud(type,filename="data.csv",header=True,sort=False,autosave=False):
     file=open(filename,'r')
     if header==True:
@@ -47,6 +97,14 @@ def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.05,is3D=True):
                 out2.append([i, d1])
     return out1,out2
 
+def yuxiangPointCloudOverlap(point, pointcloud, tolerance=0.15,is3D=False):
+    overlap=False
+    for i in pointcloud:
+        if is3D==False:
+            if yuxiangDistanceTwoPts(point,i,is3D)<tolerance:
+                overlap=True
+                return overlap
+    return overlap
 def yuxiangGetNearestPoints(referenceCloud,objectCloud): # return out : [ leftcloud, leftdistance, rightcloud, rightdistance]
     out=[]
     for i in range(referenceCloud.length()):
@@ -164,6 +222,29 @@ def yuxiangLineFitting(point3dList,mode="xy"):
         if len(point3dList)>3:
             print("line fitting out of range")
     return para1
+def yuxiangSplineFitting(pointList,degre=3):
+    xMax=0
+    xMin=1000000000
+    yMax=0
+    yMin=1000000000
+    x=[]
+    y=[]
+    z=[]
+    for i in pointList:
+        x.append(i.x)
+        y.append(i.y)
+        z.append(i.z)
+        if i.x<xMin:
+            xMin=i.x
+        if i.x>xMax:
+            xMax=i.x
+        if i.y<yMin:
+            yMin=i.y
+        if i.y>yMax:
+            yMax=i.y
+    tck = scipy.interpolate.splrep(x, y)
+    print(tck)
+    return tck,[xMax,xMin,yMax,yMin]
 # get intersection of a plane and vector with a tolerance default 10e-6
 def yuxiangIntersectPlaneVector(plane, line, tolerance=10e-6):
     normal = plane.normal.toArray()
@@ -334,7 +415,7 @@ class PointsCloud:
         self.tangent=[]
         self.normal=[]
         self.slope=[]
-
+        self.cap=[]
     def toList(self):
         list = []
         for i in self.data:
@@ -390,6 +471,7 @@ class PointsCloud:
         self.tangent=[]
         self.normal=[]
         self.slope=[]
+        self.cap=[]
         for i in range(self.length()):
             temp = []
             if i < searchNeighbor-1:
@@ -404,6 +486,11 @@ class PointsCloud:
             self.normal.append(-1/(para[1]))
             para2=yuxiangLineFitting(temp,mode="z")
             self.slope.append(para2[1])
+            pt1=temp[0]
+            pt2=temp[-1]
+            cap=yuxiangGetCap(pt1,pt2)
+            self.cap.append(cap)
+
     def setType(self,type):
         for i in self.data:
             i.setType(type)
@@ -415,19 +502,45 @@ class PointsCloud:
             else:
                 out += str([i.x, i.y, i.z,i.type]) + "\n"
         return out
-    def resample(self,radius=5):
-        data=self.data
-        size=len(data)
-        deletenumber=0
-        for i in range(size-1):
-            j=1
-            while j<size-i-1-deletenumber:
-                if yuxiangDistanceTwoPts(data[i],data[j])<radius:
-                    data.pop(j)
-                    deletenumber+=1
-                j+=1
-        return data
+    def resample(self,radius=3,neighbor=0.5):
 
+        data=self.data
+        tck,limit=yuxiangSplineFitting(data)
+        x=np.linspace(limit[1],limit[0],200)
+        newData=[]
+        y=scipy.interpolate.splev(x, tck)
+        print(y)
+        for i in range(len(x)):
+            newData.append(Point3D(x[i],y[i],0))
+        self.data=newData
+        return newData
+
+
+        # size=len(data)
+        # deletenumber=0
+        # for i in range(size-1):
+        #     j=1
+        #     while j<size-i-1-deletenumber:
+        #         if yuxiangDistanceTwoPts(data[i],data[j])<radius:
+        #             data.pop(j)
+        #             deletenumber+=1
+        #         j+=1
+        # self.data=data
+        # return data
+
+        # data=self.data
+        # startPt=data[0]
+        # neighborPts=[]
+        # resampledPts=[]
+        # for i in data:
+        #     d=yuxiangDistanceTwoPts(startPt,i)
+        #     if d<neighbor:
+        #         neighborPts.append(i)
+        #     if d>radius-0.1:
+        #         resampledPts.append(yuxiangGetPointCloudCenter(neighborPts))
+        #         startPt=i
+        # self.data=resampledPts
+        # return resampledPts
     def saveToFile(self,filename):
         file =open(filename,'w')
         for i in range(self.length()):
