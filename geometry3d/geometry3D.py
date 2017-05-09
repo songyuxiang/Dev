@@ -21,16 +21,7 @@ class yuxiangConvert:
     def yuxiangDegree2Radian(degree):
         radian=degree/180*np.pi
         return radian
-def yuxiangGetPointCloudCenter(pointList):
-    size=len(pointList)
-    x=0
-    y=0
-    z=0
-    for i in pointList:
-        x+=i.x
-        y+=i.y
-        z+=i.z
-    return Point3D(x/size,y/size,z/size)
+
 def yuxiangGetCap(startPt,endPt):
     deltaX=endPt.x-startPt.x
     deltaY=endPt.y-startPt.y
@@ -222,29 +213,7 @@ def yuxiangLineFitting(point3dList,mode="xy"):
         if len(point3dList)>3:
             print("line fitting out of range")
     return para1
-def yuxiangSplineFitting(pointList,degre=3):
-    xMax=0
-    xMin=1000000000
-    yMax=0
-    yMin=1000000000
-    x=[]
-    y=[]
-    z=[]
-    for i in pointList:
-        x.append(i.x)
-        y.append(i.y)
-        z.append(i.z)
-        if i.x<xMin:
-            xMin=i.x
-        if i.x>xMax:
-            xMax=i.x
-        if i.y<yMin:
-            yMin=i.y
-        if i.y>yMax:
-            yMax=i.y
-    tck = scipy.interpolate.splrep(x, y)
-    print(tck)
-    return tck,[xMax,xMin,yMax,yMin]
+
 # get intersection of a plane and vector with a tolerance default 10e-6
 def yuxiangIntersectPlaneVector(plane, line, tolerance=10e-6):
     normal = plane.normal.toArray()
@@ -323,7 +292,10 @@ class Point3D(Geometry3D):
         self.z = float(z)
         self.id=id
         self.type=type
-        self.height=0
+    def toArray(self):
+        return np.array([self.x, self.y, self.z])
+    def setType(self,type):
+        self.type=type
     def __add__(self, other):
         x = self.x + other.x
         y = self.y + other.y
@@ -338,19 +310,6 @@ class Point3D(Geometry3D):
             return Point3D(x,y,z)
         except TypeError:
             print("error : divisor has to be a number")
-    def searchNeighborPoints(self, pointscloud, searchDistance=0.1):
-        neighborPts = []
-        distances = []
-        for i in pointscloud:
-            d = yuxiangDistanceTwoPts(self, i)
-            if d < searchDistance:
-                neighborPts.append(i)
-                distances.append(d)
-        return neighborPts, distances
-    def toArray(self):
-        return np.array([self.x, self.y, self.z])
-    def setType(self,type):
-        self.type=type
     def __str__(self):
         if self==None:
             return "None"
@@ -364,28 +323,25 @@ class Vector3D(Geometry3D):
         self.y = float(y)
         self.z = float(z)
         self.length, self.phi, self.theta = yuxiangCartesian2Spheric(x, y, z)
-
-    def __truediv__(self, other):
-        x = self.x / other
-        y = self.y / other
-        z = self.z / other
-        return Vector3D(x, y, z)
-
     def unify(self):
         return self / self.length
-
-    def toArray(self):
-        return np.array([self.x, self.y, self.z])
-
-    def __str__(self):
-        return "3D VECTOR (x:%f, y:%f, z:%f) ; (ro:%f, phi:%f, theta:%f)" % (
-        self.x, self.y, self.z, self.length, self.phi, self.theta)
-
     def rotate(self, phi, theta):
         phi = self.phi + phi
         theta = self.theta + theta
         x, y, z = yuxiangSpheric2Cartesian(self.length, phi, theta)
         return x, y, z
+    def toArray(self):
+        return np.array([self.x, self.y, self.z])
+    def __truediv__(self, other):
+        x = self.x / other
+        y = self.y / other
+        z = self.z / other
+        return Vector3D(x, y, z)
+    def __str__(self):
+        return "3D VECTOR (x:%f, y:%f, z:%f) ; (ro:%f, phi:%f, theta:%f)" % (
+        self.x, self.y, self.z, self.length, self.phi, self.theta)
+
+
 
 
 class Line3D(Geometry3D):
@@ -407,7 +363,6 @@ class Line3D(Geometry3D):
 
 class PointsCloud:
     def __init__(self, list=[]):
-
         self.data = []
         for i in list:
             self.data.append((i))
@@ -416,33 +371,28 @@ class PointsCloud:
         self.normal=[]
         self.slope=[]
         self.cap=[]
-    def toList(self):
-        list = []
-        for i in self.data:
-            pt = [i.x, i.y, i.z]
-            list.append(pt)
-        return list
-    def clonefrom(self,cloud):
-        self.data=cloud.data
-        self.tangent=cloud.tangent
-        self.normal=cloud.normal
-    def toArray(self):
-        return np.array(self.toList())
-    def seperateXYZ(self):
-        x=[]
-        y=[]
-        z=[]
-        for i in self.data:
-            x.append(i.x)
-            y.append(i.y)
-            z.append(i.z)
-        return x,y,z
+
     def addPoint(self, point):
         self.data.append(point)
     def length(self):
         return len(self.data)
     def __getitem__(self, item):
         return self.data[item]
+    def resample(self,radius=3):
+        data = self.data
+        size=len(data)
+        i=0
+        while i < size:
+            j=i+1
+            while j < size:
+                if yuxiangDistanceTwoPts(data[i], data[j]) < radius:
+                    data.pop(j)
+                    size -= 1
+                else:
+                    j += 1
+            i +=1
+        self.data=data
+        return data
     def sort(self):
         Max=0
         maxIndex=0
@@ -502,45 +452,8 @@ class PointsCloud:
             else:
                 out += str([i.x, i.y, i.z,i.type]) + "\n"
         return out
-    def resample(self,radius=3,neighbor=0.5):
-
-        data=self.data
-        tck,limit=yuxiangSplineFitting(data)
-        x=np.linspace(limit[1],limit[0],200)
-        newData=[]
-        y=scipy.interpolate.splev(x, tck)
-        print(y)
-        for i in range(len(x)):
-            newData.append(Point3D(x[i],y[i],0))
-        self.data=newData
-        return newData
 
 
-        # size=len(data)
-        # deletenumber=0
-        # for i in range(size-1):
-        #     j=1
-        #     while j<size-i-1-deletenumber:
-        #         if yuxiangDistanceTwoPts(data[i],data[j])<radius:
-        #             data.pop(j)
-        #             deletenumber+=1
-        #         j+=1
-        # self.data=data
-        # return data
-
-        # data=self.data
-        # startPt=data[0]
-        # neighborPts=[]
-        # resampledPts=[]
-        # for i in data:
-        #     d=yuxiangDistanceTwoPts(startPt,i)
-        #     if d<neighbor:
-        #         neighborPts.append(i)
-        #     if d>radius-0.1:
-        #         resampledPts.append(yuxiangGetPointCloudCenter(neighborPts))
-        #         startPt=i
-        # self.data=resampledPts
-        # return resampledPts
     def saveToFile(self,filename):
         file =open(filename,'w')
         for i in range(self.length()):
@@ -552,7 +465,7 @@ class PointsCloud:
             else:
                 file.write("None" + ',')
             try:
-                file.write(str(self.tangent[i])+',')
+                file.write(str(self.cap[i])+',')
             except IndexError:
                 file.write("None"+',')
             try:
@@ -578,11 +491,11 @@ class PointsCloud:
             self.data.append(point)
             try:
                 if data[4]!="None":
-                    self.tangent.append(data[4])
+                    self.cap.append(data[4])
                 else:
-                    self.tangent.append(None)
+                    self.cap.append(None)
             except IndexError:
-                self.tangent.append(None)
+                self.cap.append(None)
             try:
                 if data[5]!="None":
                     self.normal.append(data[5])
@@ -598,6 +511,14 @@ class PointsCloud:
             except IndexError:
                 self.slope.append(None)
         print("loaded")
+    def toList(self):
+        list = []
+        for i in self.data:
+            pt = [i.x, i.y, i.z]
+            list.append(pt)
+        return list
+    def toArray(self):
+        return np.array(self.toList())
     def show(self):
         x=[]
         y=[]

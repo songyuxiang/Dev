@@ -35,7 +35,7 @@ def yuxiangExtraireNearestPointInfo(out):
 
 output=open("./result/output1.csv",'w')
 # output.write("id,x,y,z,heading,slope,crossfall,low_vegetation_left_nearestPointHeight,low_vegetation_left_nearestPointDistance,low_vegetation_left_highestestPointHeight,low_vegetation_left_highestestPointDistance,low_vegetation_right,medium_vegetation_left,medium_vetetaion_right,high_vegetation_left,high_vegetation_right,building_left,building_right\n")
-output.write("id,lon(rad),lat(rad),elevation(m),cap(rad),slope,crossfall,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,hasBridge\n")
+output.write("id,lon(rad),lat(rad),elevation(m),cap(rad),slope,crossfall,hasBridge,hasSwitch,hasTunnel,hasTermination,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right\n")
 
 rail1=yuxiangLoadPointCloud("101")
 rail2=yuxiangLoadPointCloud("102")
@@ -53,11 +53,10 @@ rail1.resample(3)
 rail1.saveToFile("./result/cloudfitting.csv")
 rail1.updateTangents()
 
-rail1.saveToFile("./result/cloud101.csv")
 middleTrack12,crossfall12=yuxiangFindMiddleTrack(rail1,rail2)
 middleTrack12.updateTangents()
 middleTrack12.saveToFile("./result/middle.csv")
-
+rail2.saveToFile("./result/cloud102.csv")
 distanceVegetationLow=yuxiangGetNearestPoints(middleTrack12,vegetation_low)
 # print(distanceVegetationLow)
 distanceVegetationMedium=yuxiangGetNearestPoints(middleTrack12,vegetation_medium)
@@ -93,7 +92,13 @@ for i in range(middleTrack12.length()):
     # out += "%d,%f,%f,%f,%f,%f,%f," % (
     # i + 1, middleTrack12[i].x,middleTrack12[i].y,middleTrack12[i].z, middleTrack12.tangent[i], middleTrack12.slope[i], crossfall12[i])
     out+="%d,%.16f,%.16f,%f,%.16f,%f,%f,"%(i+1,lon,lat,elev,middleTrack12.cap[i],middleTrack12.slope[i],-crossfall12[i])
-
+    if yuxiangPointCloudOverlap(middleTrack12.data[i],bridge):
+        out+="true"+","
+    else:
+        out+="false"+","
+    out+="false"+"," #has switch
+    out+="false"+"," #has tunnel
+    out+="false"+"," #has termination
     out += "3"+  ","
     out += str(out_vegLow[1][i]) + ","
     out += str(out_vegLow[2][i]) + ","
@@ -129,12 +134,9 @@ for i in range(middleTrack12.length()):
     out += str(out_building[7][i]) + ","
     out += str(out_building[8][i]) + ","
     out += str(out_building[10][i]) + ","
-    out += str(out_building[11][i]) + ","
+    out += str(out_building[11][i]) + "\n"
     # out += str(out_building[11][i]) + "\n"
-    if yuxiangPointCloudOverlap(middleTrack12.data[i],bridge):
-        out+="true"+"\n"
-    else:
-        out+="false"+"\n"
+
     out=out.replace("None","NaN")
 
 #
