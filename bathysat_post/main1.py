@@ -37,11 +37,17 @@ class GpsBathyData:
         self.N=None
         self.E=None
         self.H=None
+        self.Ncc=None
+        self.Ecc=None
+        self.Hcc=None
         self.numberSatelite=None
         self.precision=None
         self.depth=None
     def __str__(self):
-        out=str(self.id)+","+str(self.N)+","+str(self.E)+","+str(self.H)+","+str(self.gpsTime)+","+str(self.numberSatelite)+","+str(self.precision)+","+str(self.depth)+","+str(self.bathyTime)
+        if self.Ecc!=None and self.Ncc!=None and self.Hcc!=None:
+            out=str(self.id)+","+str(self.Ncc)+","+str(self.Ecc)+","+str(self.Hcc)+","+str(self.gpsTime)+","+str(self.numberSatelite)+","+str(self.precision)+","+str(self.depth)+","+str(self.bathyTime)
+        else:
+            out=str(self.id)+","+str(self.N)+","+str(self.E)+","+str(self.H)+","+str(self.gpsTime)+","+str(self.numberSatelite)+","+str(self.precision)+","+str(self.depth)+","+str(self.bathyTime)
         return out
 
 class DataArray:
@@ -57,7 +63,8 @@ class DataArray:
     def filterData(self):
         data=[]
         for i in self.data:
-            if i.N==None or i.E==None or i.H==None or i.depth==None:
+            # if i.N==None or i.E==None or i.H==None or i.depth==None:
+            if i.N == None or i.E == None or i.H == None:
                 continue
             data.append(i)
         self.data=data
@@ -68,7 +75,7 @@ def formatGpsData(data,format_org="ddmm.mmmmmmm",format_dest="dd.ddddd"):
     d=data[pointPos-4:pointPos-2]
     m=data[pointPos-2:]
     out=int(d)+float(m)/60
-    return str(out)
+    return float(out)
 
 def yuxiangLoadGpsBathyData(filename):
     try:
@@ -78,38 +85,32 @@ def yuxiangLoadGpsBathyData(filename):
 
         for lineNb in range(len(data)):
             lineData=GpsBathyData()
-            elements=data[lineNb].replace('\n',"").split(',')
-            posM = 1000
+            pos_GPGGA=data[lineNb].find("$GPGGA")
+            gpsElements=data[lineNb][pos_GPGGA:].split(',')
             lineData.id = lineNb
-            for i in range(len(elements)):
-                # print(elements)
-                try:
+            try:
+                lineData.bathyTime=data[lineNb][9:28]
 
-                    lineData.bathyTime=elements[0][9:]
-                    if elements[i]=="M":
-                        if posM>i:
-                            posM=i
-                            if elements[posM-1]!="":
-                                lineData.H=float(elements[posM-1])
-                    if elements[i]=="N":
-                        if elements[i - 1] != "":
-                            lineData.N=float(formatGpsData(elements[i-1]))
-                    if elements[i]=="S":
-                        if elements[i - 1] != "":
-                            lineData.N=-float(formatGpsData(elements[i-1]))
-                    if elements[i]=="W":
+                if gpsElements[1]!='':
+                    lineData.gpsTime=gpsElements[1]
 
-                        if elements[i - 1] != "":
-                            lineData.E=-float(formatGpsData(elements[i-1]))
-                    if elements[i]=="E":
-                        if elements[i - 1] != "":
-                            lineData.E=float(formatGpsData(elements[i-1]))
-                    if elements[i].find("GPGGA")>0:
-                        if elements[i + 1] != "":
-                            lineData.gpsTime=elements[i+1]
+                if gpsElements[3]=='N':
+                    lineData.N = float(formatGpsData(gpsElements[2]))
+                elif gpsElements[3]=='S':
+                    lineData.N = -float(formatGpsData(gpsElements[2]))
+                if gpsElements[5]=='E':
+                    lineData.E=float(formatGpsData(gpsElements[4]))
+                elif gpsElements[5]=='W':
+                    lineData.E = -float(formatGpsData(gpsElements[4]))
+                if gpsElements[7]!='':
+                    lineData.numberSatelite=int(gpsElements[7])
+                if gpsElements[8] != '':
+                    lineData.precision = float(gpsElements[8])
+                if gpsElements[9] != '':
+                    lineData.H = float(gpsElements[9])
 
-                except:
-                    print("can't load data")
+            except:
+                print("can't load data")
             dataArray.append(lineData)
         return dataArray
     except:
@@ -123,27 +124,24 @@ class mainwindow(QMainWindow,bathypost.Ui_BathyPost):
         self.setupUi(self)
         self.pushButton_Browser.clicked.connect(self.loadData)
         self.pushButton_Calculate.clicked.connect(self.calculate)
-        self.data=DataArray()
+        self.dataArray=DataArray()
     def loadData(self):
         filename,_=QFileDialog.getOpenFileName()
         self.lineEdit_DataBrowser.setText(filename)
-        self.data=yuxiangLoadGpsBathyData(filename)
-        self.plainTextEdit_RawData.setPlainText(str(self.data))
+        self.dataArray=yuxiangLoadGpsBathyData(filename)
+        self.plainTextEdit_RawData.setPlainText(str(self.dataArray))
         self.pushButton_Calculate.setEnabled(True)
     def calculate(self):
-        projection=self.comboBox_zone.currentText()[-2:]
-        self.gpsData.filterData()
-        data=self.data.data
+        projection=self.comboBox_CCZone.currentText()[-2:]
+        self.dataArray.filterData()
         out=""
-        for i in range(len(self.gpsData.data)):
+        for i in range(len(self.dataArray.data)):
             # self.gpsData.dataCC[i].N,self.gpsData.dataCC[i].W,self.gpsData.dataCC[i].H= yuxiangProjection.WGS84ToCC(self.gpsData.dataWGS[i].N,self.gpsData.dataWGS[i].W,self.gpsData.dataWGS[i].H,self.comboBox_zone.currentText()[-2:])
             # print(self.gpsData.dataWGS[i].N,self.gpsData.dataWGS[i].W,self.gpsData.dataWGS[i].H,self.comboBox_zone.currentText()[-2:])
-            x,y,z= yuxiangProjection.WGS84ToCC(self.gpsData.data[i].W,self.gpsData.data[i].N,self.gpsData.data[i].H,projection)
-            out+=str(x)+","+str(y)+","+str(z)+"\n"
-        self.plainTextEdit_result.setPlainText(out)
+            self.dataArray.data[i].Ecc,self.dataArray.data[i].Ncc,self.dataArray.data[i].Hcc= yuxiangProjection.WGS84ToCC(self.dataArray.data[i].E,self.dataArray.data[i].N,self.dataArray.data[i].H,projection)
+        self.plainTextEdit_Result.setPlainText(str(self.dataArray))
 if __name__=='__main__':
     app=QApplication(sys.argv)
     form=mainwindow()
     form.show()
-    print(formatGpsData("4446.6757598"))
     app.exec_()

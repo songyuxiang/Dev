@@ -1,8 +1,20 @@
 from geometry3D import *
 
 
-
-
+def yuxiangLimitDecimal(number,decimalnumber=2):
+    number=str(number)
+    out="None"
+    if number!='None':
+        pos=number.find('.')
+        if pos<0:
+            number=number+".00"
+        elif len(number)-pos<2:
+            number=number+"0"
+        try:
+            out=number[:pos+3]
+        except:
+            out=number
+    return out
 def yuxiangExtraireNearestPointInfo(out):
     nearestPt1=[]
     nearestPt2=[]
@@ -35,7 +47,7 @@ def yuxiangExtraireNearestPointInfo(out):
 
 output=open("./result/output1.csv",'w')
 # output.write("id,x,y,z,heading,slope,crossfall,low_vegetation_left_nearestPointHeight,low_vegetation_left_nearestPointDistance,low_vegetation_left_highestestPointHeight,low_vegetation_left_highestestPointDistance,low_vegetation_right,medium_vegetation_left,medium_vetetaion_right,high_vegetation_left,high_vegetation_right,building_left,building_right\n")
-output.write("id,lon(rad),lat(rad),elevation(m),cap(rad),slope,crossfall,hasBridge,hasSwitch,hasTunnel,hasTermination,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right\n")
+output.write("id,lon(rad),lat(rad),elevation(m),cap(rad),slope,crossfall,hasBridge,hasSwitch,hasTermination,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right,class,nearestD_left,nearestH_left,highestD_left,highestH_left,nearestD_right,nearestH_right,highestD_right,highestH_right\n")
 
 rail1=yuxiangLoadPointCloud("101")
 rail2=yuxiangLoadPointCloud("102")
@@ -49,11 +61,14 @@ vegetation_high =yuxiangLoadPointCloud("5")
 building=yuxiangLoadPointCloud("6")
 bridge=yuxiangLoadPointCloud("601")
 rail1.saveToFile("test.csv")
+
 rail1.resample(3)
 rail1.saveToFile("./result/cloudfitting.csv")
+rail1.sort(False)
 rail1.updateTangents()
 
 middleTrack12,crossfall12=yuxiangFindMiddleTrack(rail1,rail2)
+middleTrack12.sort(False)
 middleTrack12.updateTangents()
 middleTrack12.saveToFile("./result/middle.csv")
 rail2.saveToFile("./result/cloud102.csv")
@@ -97,44 +112,43 @@ for i in range(middleTrack12.length()):
     else:
         out+="false"+","
     out+="false"+"," #has switch
-    out+="false"+"," #has tunnel
     out+="false"+"," #has termination
     out += "3"+  ","
-    out += str(out_vegLow[1][i]) + ","
-    out += str(out_vegLow[2][i]) + ","
-    out += str(out_vegLow[4][i]) + ","
-    out += str(out_vegLow[5][i]) + ","
-    out += str(out_vegLow[7][i]) + ","
-    out += str(out_vegLow[8][i]) + ","
-    out += str(out_vegLow[10][i]) + ","
-    out += str(out_vegLow[11][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[1][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[2][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[4][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[5][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[7][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[8][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[10][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLow[11][i]) + ","
     out += "4" + ","
-    out += str(out_vegMedium[1][i]) + ","
-    out += str(out_vegMedium[2][i]) + ","
-    out += str(out_vegMedium[4][i]) + ","
-    out += str(out_vegMedium[5][i]) + ","
-    out += str(out_vegMedium[7][i]) + ","
-    out += str(out_vegMedium[8][i]) + ","
-    out += str(out_vegMedium[10][i]) + ","
-    out += str(out_vegMedium[11][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[1][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[2][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[4][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[5][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[7][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[8][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[10][i]) + ","
+    out += yuxiangLimitDecimal(out_vegMedium[11][i]) + ","
     out += "5" + ","
-    out += str(out_vegLHigh[1][i]) + ","
-    out += str(out_vegLHigh[2][i]) + ","
-    out += str(out_vegLHigh[4][i]) + ","
-    out += str(out_vegLHigh[5][i]) + ","
-    out += str(out_vegLHigh[7][i]) + ","
-    out += str(out_vegLHigh[8][i]) + ","
-    out += str(out_vegLHigh[10][i]) + ","
-    out += str(out_vegLHigh[11][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[1][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[2][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[4][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[5][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[7][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[8][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[10][i]) + ","
+    out += yuxiangLimitDecimal(out_vegLHigh[11][i]) + ","
     out += "6" + ","
-    out += str(out_building[1][i]) + ","
-    out += str(out_building[2][i]) + ","
-    out += str(out_building[4][i]) + ","
-    out += str(out_building[5][i]) + ","
-    out += str(out_building[7][i]) + ","
-    out += str(out_building[8][i]) + ","
-    out += str(out_building[10][i]) + ","
-    out += str(out_building[11][i]) + "\n"
+    out += yuxiangLimitDecimal(out_building[1][i]) + ","
+    out += yuxiangLimitDecimal(out_building[2][i]) + ","
+    out += yuxiangLimitDecimal(out_building[4][i]) + ","
+    out += yuxiangLimitDecimal(out_building[5][i]) + ","
+    out += yuxiangLimitDecimal(out_building[7][i]) + ","
+    out += yuxiangLimitDecimal(out_building[8][i]) + ","
+    out += yuxiangLimitDecimal(out_building[10][i]) + ","
+    out += yuxiangLimitDecimal(out_building[11][i]) + "\n"
     # out += str(out_building[11][i]) + "\n"
 
     out=out.replace("None","NaN")

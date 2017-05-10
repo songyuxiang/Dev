@@ -21,6 +21,24 @@ class yuxiangConvert:
     def yuxiangDegree2Radian(degree):
         radian=degree/180*np.pi
         return radian
+def yuxiangCorrectCap(capList):
+    order=np.argsort(capList)
+    newCapList=[]
+    for i in order:
+        newCapList.append(capList[i])
+    maxGap=0
+    newMax=0
+    for i in range(1,len(capList)):
+        gap=newCapList[i-1]-newCapList[i]
+        if gap>maxGap and gap>0.785:
+            newMax=newCapList[i-1]
+            print("Find new extremite : ",newMax)
+    if newMax!=0:
+        for i in capList:
+            if i <=newMax:
+                i+=np.pi*2
+    return capList
+
 
 def yuxiangGetCap(startPt,endPt):
     deltaX=endPt.x-startPt.x
@@ -46,6 +64,54 @@ def yuxiangGetCap(startPt,endPt):
     elif deltaX < 0 and deltaY >0:
         a = 3 * np.pi / 2+np.abs(np.arctan(deltaY/deltaX))
     return a
+
+def yuxiangGetPolygonSurface(pointcloud):
+    size=len(pointcloud.data)
+    result=0
+    data=pointcloud.data
+    for i in range(-1,size-1):
+
+        result+=data[i].x*data[i+1].y-data[i].y*data[i+1].x
+    return np.abs(result/2)
+def yuxiangGetVolume(pointcloud):
+    outline = yuxiangFindOutLine(pointcloud, 16)
+    outline.resample(1)
+    newOutline = yuxiangSortPointCloud(outline)
+    surface=yuxiangGetPolygonSurface(newOutline)
+    data=pointcloud.data
+    zmin=data[0].z
+    for i in data:
+        if i.z<zmin:
+            zmin=i.z
+    z=0
+    for i in data:
+        z+=i.z-zmin
+        print(i.z-zmin)
+    z_mean=z/len(data)
+    print(z_mean)
+    return surface*z_mean
+def yuxiangGetPointCloudCenter(pointcloud):
+    Xc=0
+    Yc=0
+    Zc=0
+    size=len(pointcloud.data)
+    for i in pointcloud.data:
+        Xc+=i.x
+        Yc+=i.y
+        Zc+=i.z
+    return Point3D(Xc/size,Yc/size,Zc/size)
+def yuxiangSortPointCloud(pointcloud):
+    cap=[]
+    center=yuxiangGetPointCloudCenter(pointcloud)
+    for i in pointcloud.data:
+        cap.append(yuxiangGetCap(center,i))
+    cap=yuxiangCorrectCap(cap)
+    order=np.argsort(cap)
+    newCloud=PointsCloud()
+    for i in order:
+        newCloud.addPoint(pointcloud.data[i])
+    return newCloud
+
 def yuxiangLoadPointCloud(type,filename="data.csv",header=True,sort=False,autosave=False):
     file=open(filename,'r')
     if header==True:
@@ -65,6 +131,23 @@ def yuxiangLoadPointCloud(type,filename="data.csv",header=True,sort=False,autosa
     if autosave==True:
         pointcloud.saveToFile("./result/cloudRaw"+str(type)+".csv")
     return pointcloud
+
+def yuxiangFindOutLine(pointcloud,directionNumber=8):
+    outline = []
+    outlineCloud = PointsCloud()
+    for i in pointcloud.data:
+        direction = np.zeros((directionNumber,1))
+        for j in pointcloud.data:
+            pos = yuxiangGetCap(i, j)
+            if pos != None:
+                pos = int(pos // (np.pi / directionNumber*2))
+                direction[pos] = 1
+        if np.sum(direction) == directionNumber:
+            outline.append(0)
+        else:
+            outline.append(1)
+            outlineCloud.addPoint(i)
+    return outlineCloud
 
 # get distance of two 3D points
 def yuxiangDistanceTwoPts(pt1, pt2,is3D=True):
@@ -371,7 +454,7 @@ class PointsCloud:
         self.normal=[]
         self.slope=[]
         self.cap=[]
-
+        self.sortType=None
     def addPoint(self, point):
         self.data.append(point)
     def length(self):
@@ -393,53 +476,61 @@ class PointsCloud:
             i +=1
         self.data=data
         return data
-    def sort(self):
-        Max=0
-        maxIndex=0
-        for i in range(self.length()):
-            max=0
-            for j in range(self.length()):
-                d=yuxiangDistanceTwoPts(self.data[i],self.data[j])
-                if d>max:
-                    max=d
-            if max>Max:
-                Max=max
-                maxIndex=i
-        firstPt=maxIndex
-        distance=[]
-        for i in range(self.length()):
-
-            d=yuxiangDistanceTwoPts(self.data[firstPt],self.data[i])
-            distance.append(d)
-        order=np.argsort(distance)
-        newCloud=PointsCloud()
+    def sort(self,clockwise=True):
+        Xc = 0
+        Yc = 0
+        Zc = 0
+        size = len(self.data)
+        for i in self.data:
+            Xc += i.x
+            Yc += i.y
+            Zc += i.z
+        center=Point3D(Xc / size, Yc / size, Zc / size)
+        cap = []
+        for i in self.data:
+            cap.append(yuxiangGetCap(center, i))
+        cap=yuxiangCorrectCap(cap)
+        order = np.argsort(cap)
+        newData = []
         for i in order:
-            newCloud.addPoint(self.data[i])
-        self.data=newCloud.data
-    def updateTangents(self,searchNeighbor=2):
-        self.sort()
-        self.tangent=[]
-        self.normal=[]
-        self.slope=[]
-        self.cap=[]
-        for i in range(self.length()):
-            temp = []
-            if i < searchNeighbor-1:
-                temp=self.data[:i+searchNeighbor]
-            elif i>self.length()-searchNeighbor:
-                temp=self.data[(i-searchNeighbor+1):]
-            else:
-                temp=self.data[i-searchNeighbor+1:i+searchNeighbor]
+            newData.append(self.data[i])
+        if not clockwise:
+            tempData=[]
 
-            para=yuxiangLineFitting(temp)
-            self.tangent.append(para[1])
-            self.normal.append(-1/(para[1]))
-            para2=yuxiangLineFitting(temp,mode="z")
-            self.slope.append(para2[1])
-            pt1=temp[0]
-            pt2=temp[-1]
-            cap=yuxiangGetCap(pt1,pt2)
-            self.cap.append(cap)
+            for i in range(size):
+                tempData.append(newData[size-i-1])
+            newData=tempData
+            self.sortType="counter-clockwise"
+        else:
+            self.sortType="clockwise"
+        self.data=newData
+    def updateTangents(self,searchNeighbor=2):
+        if self.sortType==None:
+            print("you have to sort first the cloud!")
+        else:
+            print("sort order is  :  "+self.sortType)
+            self.tangent=[]
+            self.normal=[]
+            self.slope=[]
+            self.cap=[]
+            for i in range(self.length()):
+                temp = []
+                if i < searchNeighbor-1:
+                    temp=self.data[:i+searchNeighbor]
+                elif i>self.length()-searchNeighbor:
+                    temp=self.data[(i-searchNeighbor+1):]
+                else:
+                    temp=self.data[i-searchNeighbor+1:i+searchNeighbor]
+
+                para=yuxiangLineFitting(temp)
+                self.tangent.append(para[1])
+                self.normal.append(-1/(para[1]))
+                para2=yuxiangLineFitting(temp,mode="z")
+                self.slope.append(para2[1])
+                pt1=temp[0]
+                pt2=temp[-1]
+                cap=yuxiangGetCap(pt1,pt2)
+                self.cap.append(cap)
 
     def setType(self,type):
         for i in self.data:
@@ -454,9 +545,11 @@ class PointsCloud:
         return out
 
 
-    def saveToFile(self,filename):
+    def saveToFile(self,filename,hasId=False):
         file =open(filename,'w')
         for i in range(self.length()):
+            if hasId:
+                file.write(str(i)+',')
             file.write(str(self.data[i].x)+',')
             file.write(str(self.data[i].y)+',')
             file.write(str(self.data[i].z)+',')
@@ -533,9 +626,9 @@ class PointsCloud:
         plt.show()
 
 class Plane3D(Geometry3D):
-    def __init__(self):
-        self.center = None
-        self.normal = None
+    def __init__(self,center=None,normal=None):
+        self.center = center
+        self.normal = normal
 
     def pointFitting(self, pointsCloud):
         pointsArray = pointsCloud.toArray()
@@ -547,5 +640,7 @@ class Plane3D(Geometry3D):
         temp = svd(M)[0][:, -1]
         self.normal = Vector3D(temp[0], temp[1], temp[2])
         return self.center, self.normal
-
+    def __str__(self):
+        out="center : "+str(self.center)+" ; normal : " + str(self.normal)
+        return out
 
