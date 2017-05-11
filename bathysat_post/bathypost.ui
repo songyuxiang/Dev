@@ -37,7 +37,7 @@
      </layout>
     </item>
     <item row="1" column="0" colspan="2">
-     <widget class="QPlainTextEdit" name="plainTextEdit_RawData"/>
+     <widget class="QTableView" name="tableView"/>
     </item>
     <item row="2" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -164,11 +164,7 @@
      </layout>
     </item>
     <item row="4" column="0" colspan="2">
-     <widget class="QPlainTextEdit" name="plainTextEdit_Result">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
+     <widget class="QTableView" name="tableView_2"/>
     </item>
     <item row="5" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -211,15 +207,6 @@
      </layout>
     </item>
    </layout>
-   <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>plainTextEdit_Result</zorder>
-   <zorder>plainTextEdit_RawData</zorder>
-   <zorder>pushButton_Save</zorder>
-   <zorder>horizontalSpacer_3</zorder>
-   <zorder>horizontalSpacer_4</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

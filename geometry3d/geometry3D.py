@@ -11,6 +11,27 @@ class yuxiangProjection:
         cc = pyproj.Proj(init="epsg:39%s" % (str(zone)))
         lon, lat, elevation = pyproj.transform(cc, wgs, x1,y1,z1)
         return lon, lat, elevation
+
+def yuxiangGetAllVolumes(fileList):
+    result=[]
+    file=open("result.txt",'w')
+    for i in fileList:
+        file=open(i,'r')
+        data=file.readlines()[1:]
+        pointcloud=PointsCloud()
+        for j in data:
+            elements=j.replace('\n','').split(' ')
+            pointcloud.addPoint(Point3D(elements[0],elements[1],elements[2]))
+        temp=yuxiangGetVolume(pointcloud)
+        name=i.split("/")[-1].split(".")[0]
+        result.append([name,temp[0],temp[1]])
+        print(result)
+    for i in result:
+        for j in i:
+            file.write(j+"\t")
+        file.write("\n")
+    file.close()
+    return result
 class yuxiangConvert:
     def yuxiangRadian2Gradian(radian):
         gradian=radian*np.pi/200
@@ -73,23 +94,66 @@ def yuxiangGetPolygonSurface(pointcloud):
 
         result+=data[i].x*data[i+1].y-data[i].y*data[i+1].x
     return np.abs(result/2)
-def yuxiangGetVolume(pointcloud):
+def yuxiangGetVolume(pointcloud,reference="min",mode="level_point"):
     outline = yuxiangFindOutLine(pointcloud, 16)
     outline.resample(1)
     newOutline = yuxiangSortPointCloud(outline)
     surface=yuxiangGetPolygonSurface(newOutline)
     data=pointcloud.data
-    zmin=data[0].z
+
+    if reference=="min":
+        zmin=outline.data[0].z
+        for i in outline.data:
+            if i.z<zmin:
+                zmin=i.z
+        zRef=zmin
+    if reference=="mean":
+        zmean=0
+        for i in outline.data:
+            zmean=zmean+i.z
+        zmean=zmean/len(outline.data)
+        zRef=zmean
+    if reference=="meanf":
+        zmin = outline.data[0].z
+        for i in outline.data:
+            if i.z < zmin:
+                zmin = i.z
+        zmean=0
+        for i in outline.data:
+            zmean=zmean+i.z
+        zmean=zmean/len(outline.data)
+        zRef=(zmean+4*zmin)/5
+    zUp=[]
+    zDown=[]
     for i in data:
-        if i.z<zmin:
-            zmin=i.z
-    z=0
-    for i in data:
-        z+=i.z-zmin
-        print(i.z-zmin)
-    z_mean=z/len(data)
-    print(z_mean)
-    return surface*z_mean
+        if i.z>zRef:
+            zUp.append(i.z)
+        else:
+            zDown.append(i.z)
+    ratio=len(zUp)/(len(zUp)+len(zDown))
+    z_mean=0
+    for i in zUp:
+        z_mean += i - zRef
+    z_mean=z_mean/len(zUp)
+    surface=surface*ratio
+    if mode=="fitting_plan":
+        plane=yuxiangPlaneFitting(outline)
+        cosz=plane.normal.z
+        surface=surface*cosz
+        volume=surface*z_mean*cosz**2
+    elif mode=="level_point":
+        volume = surface * z_mean
+    return surface,volume
+def yuxiangPlaneFitting(pointcloud):
+    points=[]
+    for i in pointcloud.data:
+        points.append([i.x,i.y,i.z])
+    points = np.array(points).transpose()
+    ctr = points.mean(axis=1)
+    x = points - ctr[:, None]
+    M = np.dot(x, x.T)  # Could also use cov(x) here.
+    center, normal=ctr, svd(M)[0][:, -1]
+    return Plane3D(Point3D(center[0],center[1],center[2]),Vector3D(normal[0],normal[1],normal[2]))
 def yuxiangGetPointCloudCenter(pointcloud):
     Xc=0
     Yc=0
@@ -171,6 +235,18 @@ def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.05,is3D=True):
                 out2.append([i, d1])
     return out1,out2
 
+def yuxiangRayCloudIntersection(line,pointcloud,toleranceIntersection=0.00001,toleranceThickness=0.05,is3D=True):
+    pt1=line.startPoint
+    pt2=pt1+line.direction
+    intersectionCloud=PointsCloud()
+    for i in pointcloud.data:
+        d1=yuxiangDistanceTwoPts(pt1,i,is3D)
+        d2=yuxiangDistanceTwoPts(pt2,i,is3D)
+        print(np.abs(d1-d2-1)<toleranceIntersection)
+        if np.abs(d1-d2-1)<toleranceIntersection:
+            intersectionCloud.addPoint(i)
+    return intersectionCloud
+
 def yuxiangPointCloudOverlap(point, pointcloud, tolerance=0.15,is3D=False):
     overlap=False
     for i in pointcloud:
@@ -204,7 +280,6 @@ def yuxiangNearestLineCloudIntersection(line, pointcloud, tolerance=0.05,is3D=Fa
     highestH2=0
     highestD1=None
     highestD2=None
-
     zRef=pt1.z
     for i in pointcloud.data:
         d1 = yuxiangDistanceTwoPts(pt1, i,is3D)
@@ -419,6 +494,11 @@ class Vector3D(Geometry3D):
         x = self.x / other
         y = self.y / other
         z = self.z / other
+        return Vector3D(x, y, z)
+    def __mul__(self, other):
+        x = self.x * other
+        y = self.y * other
+        z = self.z * other
         return Vector3D(x, y, z)
     def __str__(self):
         return "3D VECTOR (x:%f, y:%f, z:%f) ; (ro:%f, phi:%f, theta:%f)" % (
