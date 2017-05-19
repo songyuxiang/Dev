@@ -8,9 +8,9 @@ for i in data:
     pointcloud.addPoint(Point3D(element[0],element[1],element[2]))
 pointcloud.saveToFile("reflexion/cloud.csv")
 
-pt1=Point3D(1404626.375,4188824,50.419998)
-pt2=Point3D(1404626.375,4188894,47.419998)
-line=Line3D(Point3D(1404626.375,4188824,50.419998),Point3D(1404626.375,4188894,47.419998))
+pt1=Point3D(1404636.04,4188873.94,57.33)
+pt2=Point3D(1404622.04,4188896.94,42.33)
+line=Line3D(pt1,pt2)
 directionCloud=PointsCloud()
 directionCloud.addPoint(pt1)
 directionCloud.addPoint(pt2)

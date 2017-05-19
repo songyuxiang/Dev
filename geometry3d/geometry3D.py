@@ -18,7 +18,7 @@ def yuxiangGetAllVolumes(fileList):
     for i in fileList:
         file=open(i,'r')
         data=file.readlines()[1:]
-        pointcloud=PointsCloud()
+        pointcloud=PointCloud()
         for j in data:
             elements=j.replace('\n','').split(' ')
             pointcloud.addPoint(Point3D(elements[0],elements[1],elements[2]))
@@ -60,6 +60,50 @@ def yuxiangCorrectCap(capList):
                 i+=np.pi*2
     return capList
 
+def yuxiangGetTangent(pointList):
+    startPt=pointList[0]
+    endPt=pointList[-1]
+    if (endPt.x-startPt.x)!=0:
+        return (endPt.y-startPt.y)/(endPt.x-startPt.x)
+    else:
+        return 999999999
+def yuxiangDevideCloudByDistance(pointcloud,threshold=0.3):
+    out=[]
+    data=pointcloud.data
+    size=len(data)
+    i=0
+    while i <size:
+        group = []
+        group.append(data[i])
+        data.pop(i)
+        size-=1
+
+        hasNeignor=False
+        while not hasNeignor:
+            hasNeignor = False
+            for element in group:
+                j = 0
+                while j<size:
+                    if yuxiangCheckNeighor(element,data[j],threshold):
+
+                        group.append(data[j])
+                        data.pop(j)
+                        size -= 1
+                        hasNeignor=True
+                    else:
+                        j += 1
+        out.append(group)
+        i += 1
+    pointcloudList=[]
+    for i in out:
+        pc=PointCloud(i)
+        pointcloudList.append(pc)
+    return pointcloudList
+def yuxiangCheckNeighor(point1,point2,threshold=0.3):
+    if abs(point1.x-point2.x)<threshold and abs(point1.y-point2.y)<threshold and abs(point1.z-point2.z)<threshold:
+        return True
+    else:
+        return False
 
 def yuxiangGetCap(startPt,endPt):
     deltaX=endPt.x-startPt.x
@@ -154,6 +198,17 @@ def yuxiangPlaneFitting(pointcloud):
     M = np.dot(x, x.T)  # Could also use cov(x) here.
     center, normal=ctr, svd(M)[0][:, -1]
     return Plane3D(Point3D(center[0],center[1],center[2]),Vector3D(normal[0],normal[1],normal[2]))
+
+def yuxiangFindCloudCenterTrack(pointcloud):
+    out=PointCloud()
+    for i in pointcloud.data:
+        temp = PointCloud()
+        for j in pointcloud.data:
+            if yuxiangCheckNeighor(i, j, 1):
+                temp.addPoint(j)
+        centerPt = yuxiangGetPointCloudCenter(temp)
+        out.addPoint(centerPt)
+    return out
 def yuxiangGetPointCloudCenter(pointcloud):
     Xc=0
     Yc=0
@@ -171,40 +226,40 @@ def yuxiangSortPointCloud(pointcloud):
         cap.append(yuxiangGetCap(center,i))
     cap=yuxiangCorrectCap(cap)
     order=np.argsort(cap)
-    newCloud=PointsCloud()
+    newCloud=PointCloud()
     for i in order:
         newCloud.addPoint(pointcloud.data[i])
     return newCloud
 
-def yuxiangLoadPointCloud(type,filename="data.csv",header=True,sort=False,autosave=False):
+def yuxiangLoadPointCloud(filename,type,typeCol=3,spliter=",",header=True,sort=False,autosave=False):
     file=open(filename,'r')
     if header==True:
         data=file.readlines()[1:]
     else:
         data=file.readlines()
-    pointcloud=PointsCloud()
+    pointcloud=PointCloud()
     for i in data:
-        i=i.replace("\n","").split(",")
+        i=i.replace("\n","").split(spliter)
 
-        if str(i[3])==type or float(i[3])==float(type):
-            point=Point3D(i[0],i[1],i[2],type=i[3])
+        if str(i[typeCol])==type or float(i[typeCol])==float(type):
+            point=Point3D(i[0],i[1],i[2],type=i[typeCol])
 
             pointcloud.addPoint(point)
     if sort==True:
-        pointcloud.updateTangents()
+        pointcloud.sort()
     if autosave==True:
-        pointcloud.saveToFile("./result/cloudRaw"+str(type)+".csv")
+        pointcloud.saveToFile("autosave_cloudRaw"+str(type)+".csv")
     return pointcloud
 
 def yuxiangFindOutLine(pointcloud,directionNumber=8):
     outline = []
-    outlineCloud = PointsCloud()
+    outlineCloud = PointCloud()
     for i in pointcloud.data:
         direction = np.zeros((directionNumber,1))
         for j in pointcloud.data:
             pos = yuxiangGetCap(i, j)
             if pos != None:
-                pos = int(pos // (np.pi / directionNumber*2))
+                pos = int(pos // (2*np.pi / directionNumber))
                 direction[pos] = 1
         if np.sum(direction) == directionNumber:
             outline.append(0)
@@ -219,8 +274,8 @@ def yuxiangDistanceTwoPts(pt1, pt2,is3D=True):
         return np.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2 + (pt1.z - pt2.z) ** 2)
     else:
         return np.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2)
-def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.05,is3D=True):
-    pt1=line.startPoint
+def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.02,is3D=True):
+    pt1 = line.startPoint
     pt2=pt1+line.direction
     out1=[]
     out2=[]
@@ -228,22 +283,21 @@ def yuxiangLineCloudIntersection(line,pointcloud,tolerance=0.05,is3D=True):
         d1=yuxiangDistanceTwoPts(pt1,i,is3D)
         d2=yuxiangDistanceTwoPts(pt2,i,is3D)
         if d1>d2:
-            if np.abs(d1-d2-1)<tolerance:
+            if np.abs(d1-d2-1)<tolerance/d1:
                 out1.append([i,d1])
         else:
-            if np.abs(d2-d1-1)<tolerance:
+            if np.abs(d2-d1-1)<tolerance/d1:
                 out2.append([i, d1])
     return out1,out2
 
-def yuxiangRayCloudIntersection(line,pointcloud,toleranceIntersection=0.00001,toleranceThickness=0.05,is3D=True):
+def yuxiangRayCloudIntersection(line,pointcloud,toleranceIntersection=0.01,toleranceThickness=0.05,is3D=True):
     pt1=line.startPoint
     pt2=pt1+line.direction
-    intersectionCloud=PointsCloud()
+    intersectionCloud=PointCloud()
     for i in pointcloud.data:
         d1=yuxiangDistanceTwoPts(pt1,i,is3D)
         d2=yuxiangDistanceTwoPts(pt2,i,is3D)
-        print(np.abs(d1-d2-1)<toleranceIntersection)
-        if np.abs(d1-d2-1)<toleranceIntersection:
+        if np.abs(d1-d2-1)<toleranceIntersection/d1:
             intersectionCloud.addPoint(i)
     return intersectionCloud
 
@@ -264,6 +318,36 @@ def yuxiangGetNearestPoints(referenceCloud,objectCloud): # return out : [ leftcl
         out.append(yuxiangNearestLineCloudIntersection(line,objectCloud,tolerance=0.01,is3D=False))
     return out
 
+def yuxiangFarestLineCloudIntersection(point,direction,pointcloud,tolerance=0.01,is3D=False):
+    point2=point+direction
+    dm1=0
+    pm1=None
+    dm2=0
+    pm2=None
+
+    for i in pointcloud.data:
+        d1 = yuxiangDistanceTwoPts(point, i, is3D)
+        d2 = yuxiangDistanceTwoPts(point2, i, is3D)
+        if np.abs(d1+d2-1)<tolerance:
+            if d1 > dm1:
+                dm1 = d1
+                pm1 = i
+        if np.abs(d2-d1-1)<tolerance:
+            if d2 > dm2:
+                dm2=d2
+                pm2 = i
+        #
+        # if d1 > d2:
+        #     if np.abs(d1 - d2 - 1) < tolerance:
+        #
+        #         if d1>dm1:
+        #             dm1=d1
+        #             pm1=i
+        # else:
+        #     if np.abs(d2 - d1 - 1) < tolerance and np.abs(d2 + d1 - 1) < tolerance:
+        #         if d2 > dm2:
+        #             pm2 = i
+    return [pm1,d1,pm2,d2]
 def yuxiangNearestLineCloudIntersection(line, pointcloud, tolerance=0.05,is3D=False):
     pt1 = line.startPoint
     pt2 = pt1 + line.direction
@@ -320,7 +404,7 @@ def yuxiangNearestLineCloudIntersection(line, pointcloud, tolerance=0.05,is3D=Fa
     return nearestPt1, nearestD1, nearestH1,highestPt1, highestD1, highestH1, nearestPt2, nearestD2, nearestH2, highestPt2, highestD2, highestH2
 
 def yuxiangFindMiddleTrack(pointcloud1,pointcloud2):
-    newpointcloud = PointsCloud()
+    newpointcloud = PointCloud()
     crossfall=[]
     for i in range(pointcloud1.length()):
         min=10000
@@ -524,8 +608,8 @@ class Line3D(Geometry3D):
                         self.endPoint.z - self.startPoint.z)
 
 
-class PointsCloud:
-    def __init__(self, list=[]):
+class PointCloud:
+    def __init__(self, list=[],filename=None):
         self.data = []
         for i in list:
             self.data.append((i))
@@ -556,7 +640,7 @@ class PointsCloud:
             i +=1
         self.data=data
         return data
-    def sort(self,clockwise=True):
+    def sort(self,clockwise=True,offset=0):
         Xc = 0
         Yc = 0
         Zc = 0
@@ -565,10 +649,11 @@ class PointsCloud:
             Xc += i.x
             Yc += i.y
             Zc += i.z
-        center=Point3D(Xc / size, Yc / size, Zc / size)
+        center=Point3D(Xc / size-offset, Yc / size-offset, Zc / size-offset)
         cap = []
         for i in self.data:
             cap.append(yuxiangGetCap(center, i))
+        print(cap)
         cap=yuxiangCorrectCap(cap)
         order = np.argsort(cap)
         newData = []
@@ -601,10 +686,9 @@ class PointsCloud:
                     temp=self.data[(i-searchNeighbor+1):]
                 else:
                     temp=self.data[i-searchNeighbor+1:i+searchNeighbor]
-
-                para=yuxiangLineFitting(temp)
-                self.tangent.append(para[1])
-                self.normal.append(-1/(para[1]))
+                tan=yuxiangGetTangent(temp)
+                self.tangent.append(tan)
+                self.normal.append(-1/(tan))
                 para2=yuxiangLineFitting(temp,mode="z")
                 self.slope.append(para2[1])
                 pt1=temp[0]
@@ -630,27 +714,30 @@ class PointsCloud:
         for i in range(self.length()):
             if hasId:
                 file.write(str(i)+',')
-            file.write(str(self.data[i].x)+',')
-            file.write(str(self.data[i].y)+',')
-            file.write(str(self.data[i].z)+',')
-            if self.data[i].type!=None:
-                file.write(str(self.data[i].type) + ',')
-            else:
-                file.write("None" + ',')
             try:
-                file.write(str(self.cap[i])+',')
-            except IndexError:
-                file.write("None"+',')
-            try:
-                file.write(str(self.normal[i])+',')
-            except IndexError:
-                file.write("None"+',')
-            try:
-                file.write(str(self.slope[i])+'\n')
-            except IndexError:
-                file.write("None"+'\n')
+                file.write("%.8f"%self.data[i].x+',')
+                file.write("%.8f"%self.data[i].y+',')
+                file.write("%.8f"%self.data[i].z+',')
+                if self.data[i].type!=None:
+                    file.write(str(self.data[i].type) + ',')
+                else:
+                    file.write("None" + ',')
+                try:
+                    file.write("%.8f"%self.cap[i]+',')
+                except:
+                    file.write("None"+',')
+                try:
+                    file.write("%.8f"%self.normal[i]+',')
+                except:
+                    file.write("None"+',')
+                try:
+                    file.write("%.8f"%self.slope[i]+'\n')
+                except:
+                    file.write("None"+'\n')
+            except:
+                print("a point leaps")
         print("saved")
-    def loadFromFile(self,filename):
+    def loadFromFile(self,filename,spliter=","):
         file = open(filename, 'r')
         lines=file.readlines()
         self.data=[]
@@ -659,7 +746,7 @@ class PointsCloud:
         self.slope=[]
         for i in lines:
             i=i.replace('\n','')
-            data=i.split(',')
+            data=i.split(spliter)
             point=Point3D(data[0],data[1],data[2],type=data[3])
             self.data.append(point)
             try:
@@ -710,8 +797,8 @@ class Plane3D(Geometry3D):
         self.center = center
         self.normal = normal
 
-    def pointFitting(self, pointsCloud):
-        pointsArray = pointsCloud.toArray()
+    def pointFitting(self, pointCloud):
+        pointsArray = pointCloud.toArray()
         points = np.array(pointsArray).transpose()
         ctr = points.mean(axis=1)
         x = points - ctr[:, None]

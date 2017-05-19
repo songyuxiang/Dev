@@ -134,7 +134,6 @@ def yuxiangList2StandardModel(list,hasHeader=True):
         size2=len(list[0])
     except:
         size2=None
-
     if size1!=None and size2!=None:
         for i in range(size1):
             for j in range(size2):
@@ -148,8 +147,53 @@ def yuxiangList2StandardModel(list,hasHeader=True):
         for i in range(size1):
             item=QStandardItem(str(list[i]))
             model.setItem(0,i,item)
-
     return model
+
+def yuxiangStandardModel2List(model,hasHeader=True):
+    r = model.rowCount()
+    c = model.columnCount()
+    table = []
+    if hasHeader:
+        header = []
+        for col in range(c):
+            header.append(model.headerData(col, Qt.Horizontal))
+        table.append(header)
+    for i in range(r):
+        row = []
+        for j in range(c):
+            row.append(model.data(model.index(i, j)))
+        table.append(row)
+    return table
+
+def getModelDataByIndex(model,i,j):
+    return model.data(model.index(i, j))
+
+def yuxiangList2StandardModel(list,hasHeader=True):
+    model = QStandardItemModel()
+    if hasHeader==True:
+        model.setHorizontalHeaderLabels(list[0])
+        list=list[1:]
+    size1=len(list)
+    try:
+        size2=len(list[0])
+    except:
+        size2=None
+    if size1!=None and size2!=None:
+        for i in range(size1):
+            for j in range(size2):
+                try:
+                    item=QStandardItem(str(list[i][j]))
+                    model.setItem(i,j,item)
+                except:
+                    item = QStandardItem("")
+                    model.setItem(i, j, item)
+    elif size1!=None and size2==None:
+        for i in range(size1):
+            item=QStandardItem(str(list[i]))
+            model.setItem(0,i,item)
+    return model
+
+
 class mainwindow(QMainWindow,bathypost.Ui_BathyPost):
     def __init__(self):
         super(self.__class__, self).__init__()
