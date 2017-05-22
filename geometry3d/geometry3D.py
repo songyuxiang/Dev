@@ -1,10 +1,6 @@
 import numpy as np
 from numpy.linalg import svd
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
 import pyproj
-import scipy
-import scipy.interpolate
 class yuxiangProjection:
     def yuxiangCC2WGS84(x1,y1,z1,zone):
         wgs = pyproj.Proj(init='epsg:4326')
@@ -25,7 +21,6 @@ def yuxiangGetAllVolumes(fileList):
         temp=yuxiangGetVolume(pointcloud)
         name=i.split("/")[-1].split(".")[0]
         result.append([name,temp[0],temp[1]])
-        print(result)
     for i in result:
         for j in i:
             file.write(j+"\t")
@@ -315,18 +310,18 @@ def yuxiangGetNearestPoints(referenceCloud,objectCloud): # return out : [ leftcl
         vector=Vector3D(1,referenceCloud.normal[i],0)
         vector=vector.unify()
         line=Line3D(referenceCloud[i],vector=vector)
-        out.append(yuxiangNearestLineCloudIntersection(line,objectCloud,tolerance=0.01,is3D=False))
+        out.append(yuxiangNearestLineCloudIntersection(line,objectCloud,tolerance=0.001,is3D=False))
     return out
 
-def yuxiangFarestLineCloudIntersection(point,direction,pointcloud,tolerance=0.01,is3D=False):
-    point2=point+direction
+def yuxiangFarestLineCloudIntersection(line,pointcloud,tolerance=0.01,is3D=False):
+    point2=line.startPoint+line.direction
     dm1=0
     pm1=None
     dm2=0
     pm2=None
 
     for i in pointcloud.data:
-        d1 = yuxiangDistanceTwoPts(point, i, is3D)
+        d1 = yuxiangDistanceTwoPts(line.startPoint, i, is3D)
         d2 = yuxiangDistanceTwoPts(point2, i, is3D)
         if np.abs(d1+d2-1)<tolerance:
             if d1 > dm1:
@@ -336,18 +331,8 @@ def yuxiangFarestLineCloudIntersection(point,direction,pointcloud,tolerance=0.01
             if d2 > dm2:
                 dm2=d2
                 pm2 = i
-        #
-        # if d1 > d2:
-        #     if np.abs(d1 - d2 - 1) < tolerance:
-        #
-        #         if d1>dm1:
-        #             dm1=d1
-        #             pm1=i
-        # else:
-        #     if np.abs(d2 - d1 - 1) < tolerance and np.abs(d2 + d1 - 1) < tolerance:
-        #         if d2 > dm2:
-        #             pm2 = i
-    return [pm1,d1,pm2,d2]
+
+    return [pm1,dm1,pm2,dm2]
 def yuxiangNearestLineCloudIntersection(line, pointcloud, tolerance=0.05,is3D=False):
     pt1 = line.startPoint
     pt2 = pt1 + line.direction
@@ -501,6 +486,28 @@ def yuxiangAxeMirror(vector, axe):
     x, y, z = vector.rotate(2 * dPhi, 2 * dTheta)
     return Vector3D(x, y, z)
 
+def yuxiangCercle3Points(A,B,C):
+    a = (C - B).getNorm()
+    b = (C - A).getNorm()
+    c = (B - A).getNorm()
+    s = (a + b + c) / 2
+    R = a * b * c / 4 / np.sqrt(s * (s - a) * (s - b) * (s - c))
+    b1 = a * a * (b * b + c * c - a * a)
+    b2 = b * b * (a * a + c * c - b * b)
+    b3 = c * c * (a * a + b * b - c * c)
+    # P=np.array([[A.x,B.x,C.x],[A.y,B.y,C.y],[A.z,B.z,C.z]]).dot(np.hstack((b1, b2, b3)))
+    P=np.array([[A.x,B.x,C.x],[A.y,B.y,C.y],[A.z,B.z,C.z]]).dot(np.hstack((b1, b2, b3)))
+    P /= b1 + b2 + b3
+    center=Point3D(P[0],P[1],P[2])
+    return Cercle(center,R)
+
+def yuxiangCurvature3Points(A,B,C):
+    a = (C - B).getNorm()
+    b = (C - A).getNorm()
+    c = (B - A).getNorm()
+    s = (a + b + c) / 2
+    R = a * b * c / 4 / np.sqrt(s * (s - a) * (s - b) * (s - c))
+    return 1/R
 
 class TextEditor:
     def __init__(self,filename,openmode='r',spliter=',',header=False):
@@ -518,6 +525,30 @@ class TextEditor:
             element=i.split(spliter)
             self.data.append(element)
 
+class Cercle:
+    def __init__(self,center=None,radius=None,threePts=None):
+        if center!=None:
+            self.center=center
+        if radius!=None:
+            self.radius=radius
+        if threePts!=None and len(threePts)==3:
+            A=threePts[0]
+            B=threePts[1]
+            C=threePts[2]
+            a = (C - B).getNorm()
+            b = (C - A).getNorm()
+            c = (B - A).getNorm()
+            s = (a + b + c) / 2
+            R = a * b * c / 4 / np.sqrt(s * (s - a) * (s - b) * (s - c))
+            b1 = a * a * (b * b + c * c - a * a)
+            b2 = b * b * (a * a + c * c - b * b)
+            b3 = c * c * (a * a + b * b - c * c)
+            P = np.array([[A.x, B.x, C.x], [A.y, B.y, C.y], [A.z, B.z, C.z]]).dot(np.hstack((b1, b2, b3)))
+            P /= b1 + b2 + b3
+            self.center = Point3D(P[0], P[1], P[2])
+            self.radius=R
+    def __str__(self):
+        return "Center : "+str(self.center)+" ; Radius : "+str(self.radius)+"\n"
 class Geometry3D:
     def __init__(self):
         self.id = 0
@@ -543,6 +574,11 @@ class Point3D(Geometry3D):
         y = self.y + other.y
         z = self.z + other.z
         return Point3D(x, y, z)
+    def __sub__(self, other):
+        x = self.x - other.x
+        y = self.y - other.y
+        z = self.z - other.z
+        return Vector3D(x,y,z)
     def __truediv__(self, other):
         try:
             other=float(other)
@@ -574,6 +610,8 @@ class Vector3D(Geometry3D):
         return x, y, z
     def toArray(self):
         return np.array([self.x, self.y, self.z])
+    def getNorm(self):
+        return np.sqrt(self.x**2+self.y**2+self.z**2)
     def __truediv__(self, other):
         x = self.x / other
         y = self.y / other
@@ -606,8 +644,12 @@ class Line3D(Geometry3D):
     def toVector(self):
         return Vector3D(self.endPoint.x - self.startPoint.x, self.endPoint.y - self.startPoint.y,
                         self.endPoint.z - self.startPoint.z)
-
-
+    def toPointCloud(self,nb=20):
+        pointcloud=PointCloud()
+        gap=1/20
+        for i in range(nb):
+            pointcloud.addPoint(self.startPoint+self.direction*gap*i)
+        return pointcloud
 class PointCloud:
     def __init__(self, list=[],filename=None):
         self.data = []
@@ -621,6 +663,9 @@ class PointCloud:
         self.sortType=None
     def addPoint(self, point):
         self.data.append(point)
+    def appendCloud(self,cloud):
+        for i in cloud.data:
+            self.data.append(i)
     def length(self):
         return len(self.data)
     def __getitem__(self, item):
@@ -653,7 +698,6 @@ class PointCloud:
         cap = []
         for i in self.data:
             cap.append(yuxiangGetCap(center, i))
-        print(cap)
         cap=yuxiangCorrectCap(cap)
         order = np.argsort(cap)
         newData = []
@@ -779,18 +823,7 @@ class PointCloud:
         return list
     def toArray(self):
         return np.array(self.toList())
-    def show(self):
-        x=[]
-        y=[]
-        z=[]
-        for i in range(self.length()):
-            x.append(self.data[i].x)
-            y.append(self.data[i].y)
-            z.append(self.data[i].z)
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(np.array(x),np.array(y),np.array(z))
-        plt.show()
+
 
 class Plane3D(Geometry3D):
     def __init__(self,center=None,normal=None):
