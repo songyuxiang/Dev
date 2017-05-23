@@ -161,38 +161,11 @@ def yuxiangGerenateHorizontalStackedBarChart(starcedBarSeriesDataList,categories
 class TestWindow(QMainWindow):
     def __init__(self, parent=None):
         super(TestWindow, self).__init__(parent=parent)
-        self.ncurves = 0
-        self.chart = QChart()
-        self.chart.legend().hide()
-        self.view = QChartView(self.chart)
-        self.view.setRenderHint(QPainter.Antialiasing)
-        self.setCentralWidget(self.view)
-        name=["test1","test2","test3","test4","test5","test6","test"]
-        date=["2017-02-01","2017-02-02","2017-02-03","2017-02-04","2017-02-05","2017-02-06","2017-02-07"]
-        print(yuxiangString2MSecsSinceEpoch("2017-02-01"))
-        x=[1,2,3,4,5,6,7]
-        y=[2,3,1,3,4,5,6]
-        # self.pieChart=yuxiangGeneratePieChart(PieSeriesData(name,x))
-        self.pieChart=yuxiangGerenateDateTimeLineChart([LineSeriesData("series1",date,y),LineSeriesData("series2",date,x)])
-        # self.pieChart=yuxiangGerenateDateTimeLineChart([LineSeriesData("series1",date,x)])
-        # axis=QDateTimeAxis()
-        # axis.setTickCount(10)
-        # axis.setFormat("dd-MM-yyyy")
-        # axis.setTitleText("Date")
-        # chartView=QChartView()
-        # self.pieChart.addAxis(axis,Qt.AlignBottom)
-        # 
-        # chartView.setChart(self.pieChart)
-        # self.setCentralWidget(chartView)
 
-        chartView=QChartView(self.pieChart)
-        self.setCentralWidget(chartView)
 
 
 if __name__ == '__main__':
-    import sys
-    from PyQt5.QtWidgets import QApplication
-    from PyQt5.QtCore import Qt
+
     app = QApplication(sys.argv)
 
     window = TestWindow()

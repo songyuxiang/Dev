@@ -21,16 +21,43 @@ def yuxiangList2StandardModel(list):
 
     return model
 
+
+
 class window(QMainWindow,mainwindow.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.model=QStandardItemModel()
-        self.setData()
+        self.model=QStandardItemModel(1000,365)
+        self.updateHeader()
+    def updateHeader(self):
+        dateList=[]
+        dateStringList=[]
+        for M in range(1,13):
+            for d in range(1,32):
+                date=QDateTime(QDate(2017,M,d))
+                if date!=QDateTime(0,0,0,0,0):
+                    dateList.append(date)
+                    dateStringList.append(date.toString("dd-MMM-yyyy"))
+        self.model.setHorizontalHeaderLabels(dateStringList)
+        self.tableView.setModel(self.model)
+        item=QItemDelegate(self)
+
     def setData(self):
         x=[[1,2,3,2,3,4]]
         self.model=yuxiangList2StandardModel(x)
         self.tableView.setModel(self.model)
+    def contextMenuEvent(self, event):
+        self.menu=QMenu(self)
+        action=QAction("action name",self)
+        self.menu.addAction(action)
+        self.menu.popup(QCursor.pos())
+        # action.triggered.connect(lambda: self.rename())
+        action.triggered.connect(self.action)
+    def action(self):
+        index=self.tableView.currentIndex()
+        print(self.model.data(index))
+
+
 if __name__=='__main__':
     app=QApplication(sys.argv)
     form=window()

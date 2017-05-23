@@ -55,6 +55,23 @@ def yuxiangCorrectCap(capList):
                 i+=np.pi*2
     return capList
 
+def yuxiangFindGapPoints(cloud,gap=0.02):
+    out=[]
+    for i in range(len(cloud.data)-1):
+        if yuxiangDistanceTwoPts(cloud.data[i],cloud.data[i+1])>gap:
+            out.append([cloud.data[i],cloud.data[i+1]])
+    return out
+def yuxiangInterpolateTwoPoints(point1,point2,interMod="linear",gap=0.01):
+    if interMod=="linear":
+        out=PointCloud()
+        vector=(point2-point1).unify()*gap
+        nb=int(yuxiangDistanceTwoPts(point2,point1)//gap)
+        out.addPoint(point1)
+        for i in range(1,nb):
+            out.addPoint(point1+vector*i)
+        out.addPoint(point2)
+    return out
+
 def yuxiangGetTangent(pointList):
     startPt=pointList[0]
     endPt=pointList[-1]
