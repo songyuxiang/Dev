@@ -1,7 +1,6 @@
 from PyQt5.Qt import *
 import mainwindow
 import sys
-
 def yuxiangList2StandardModel(list):
     size1=len(list)
     try:
