@@ -1,6 +1,7 @@
 from PyQt5.Qt import *
 import mainwindow
 import sys
+from PyQt5.QtChart import *
 def yuxiangList2StandardModel(list):
     size1=len(list)
     try:
@@ -61,4 +62,10 @@ if __name__=='__main__':
     app=QApplication(sys.argv)
     form=window()
     form.show()
+    series=QPieSeries()
+    series.append("test1",1)
+    series.append("test2",2)
+    slice=series.slices()[1]
+    slice=QPieSlice()
+    
     app.exec_()
